@@ -19,10 +19,10 @@ Electronic focuser for a Newtonian telescope with dedicated sensors.
 | `board` | 12 V power sense (ADC). 12 V missing → board LED in *beacon* (error). | 12 V on 17 |
 | `led` | All status LEDs (board + focuser; fan when wired). | board 21, focuser 47 |
 | `tmc` | TMC2209 over single-wire UART, init with verification and **re-init on 12 V return**. | EN 9, TX 18 (1 kΩ), RX 8, STEP 16, DIR 15 |
-| `motors` | Focuser motion: STEP/DIR over RMT with trapezoidal ramp, `move_to`/`move_by`/`halt`/`stop`, power gating. | — |
+| `motors` | Focuser motion: STEP/DIR over RMT with trapezoidal ramp, `move_to`/`move_by`/`stop`, power gating. | — |
 | `accelerometer` | ADXL345 over I2C (driver: init, probe, read). | SDA 5, SCL 4 |
 | `vibration` | Per-axis movement figures (demeaned RMS in m/s²) from the ADXL345. | — |
-| `usb_cdc` | USB CDC-ACM transport (copied from NRM-HA). | — |
+| `usb_cdc` | USB CDC-ACM transport (TinyUSB). | — |
 | `proto` | `proto=2`, `role="accessories"`, `schema="nrm-accessories"`; handlers `capabilities`/`state`/`action`/`config`/`control`. | — |
 | mocks | `fan`, `environment`, `inputs` (fixed values). | — |
 
@@ -38,20 +38,7 @@ Two physical buttons are planned (not yet wired):
 - Real fan (Noctua PWM + relay) and MODE button.
 - Real sensors: DS18B20, SHT31.
 - Events/subscription, extended session (op_id dedup by content), `config/set` with persistence.
-- Go gateway (Alpaca Focuser V4 / ObservingConditions V2 / Switch V3) — separate repo.
-
-## References
-
-Reference projects for programming style and examples:
-
-- **NRM-HA** — <https://github.com/nmarsollier/nrm_ha> — EQ mount firmware similar to
-  this project; source of style and programming rules. It has the LED/motor logic and
-  the whole serial protocol we largely copy. The `HAv2_TMC` branch implements TMC2209
-  correctly and must be used as the reference for TMC init/usage. It also has the 12 V
-  current-detection logic, and its commit history has the ADXL read logic
-  (`ed255b515968b862b76a47308591af3ac1976114`). Cloned locally at `~/Dev`.
-- **NRM-HA-GO** — <https://github.com/nmarsollier/nrm_ha_go> — Alpaca gateway UI for the
-  mount; will also work for this project by extending its functions. Cloned locally at `~/Dev`.
+- Go gateway (Alpaca Focuser V4 / ObservingConditions V2 / Switch V3) — separate repo: <https://github.com/nmarsollier/nrm_ha_go>.
 
 ## Hardware
 
@@ -89,29 +76,25 @@ resistor. LEDs support brightness dimming via PWM frequency.
 The autofocus is the main function of this circuit.
 
 - A NEMA 11 is connected with pulleys to the focuser's 1:10 reduction wheel via a GT2 belt.
-- The real reduction and movement per step are unknown.
-- There will be an acceleration ramp similar to NRM-HA but simplified, since motion is
-  much simpler here (one motor, very simple functions). The motion task and RMT will be
-  similar in essence.
-- The NEMA is controlled with the TMC2209.
+- The exact reduction and movement per step are not yet calibrated.
+- Motion uses STEP/DIR over RMT with a trapezoidal acceleration ramp
+  (`move_to`, `move_by`, `stop`), driven by the TMC2209.
+- EN, STEP and DIR go straight to GPIOs. EN is toggled from the Go UI and, later, from a
+  push button. Focuser state is shown on an LED.
 
-Control connections: EN, STEP and DIR go straight to GPIOs. EN can be changed from the
-Go UI and with a push button on a GPIO (manual use). Focuser state is shown on an LED.
-
-UART is configured single-wire with a 1 kΩ resistor between the TMC TX and two ESP
-GPIOs. Over UART it configures 16 microsteps, 0.8 A and whatever is needed for smooth,
-silent motor operation.
+The TMC2209 uses single-wire UART (a 1 kΩ resistor between the TMC TX and the two ESP
+GPIOs) to configure 16 microsteps and 0.8 A for smooth, silent operation.
 
 ## Noctua NF-A8 PWM fan
 
-- The fan is turned on/off with a relay on a dedicated GPIO.
-- Normal state is controlled by the ESP, which reads ambient and mirror temperatures to
-  set the speed: while a temperature difference exists the fan runs at 100%; when the
-  temperatures match, flow drops to 30% to keep air moving.
-- Speed can also be forced by software (UI, or during tracking to avoid vibrations).
+- The fan's 12 V supply is switched by a relay on a dedicated GPIO.
+- Speed is set with PWM on a GPIO at 25 kHz. The fan's PWM input has an internal 5 V
+  pull-up, so the 3.3 V GPIO drives it through an open-drain N-MOSFET (2N7002).
+- In normal mode the ESP reads ambient and mirror temperature to set the speed: while
+  they differ the fan runs at 100%; when they match it drops to 30% to keep air moving.
+- Speed can also be forced from software (UI, or during tracking to avoid vibrations).
 - A push button toggles between normal and off.
 - A dedicated LED shows the fan state, and it also shows in the Go UI.
-- PWM is controlled with another GPIO to adjust speed.
 
 ## Mirror temperature sensor — DS18B20
 
@@ -147,9 +130,9 @@ The internal firmware is responsible for reading all sensors and:
 
 ## Communication
 
-USB-CDC with JSON messages similar to NRM-HA. Provides the information and processes the
-commands needed for Alpaca and other devices controlled by the ESP. The Go gateway will
-implement the full Alpaca Focuser and the other needed interfaces.
+USB-CDC with JSON messages. Provides the information and processes the commands needed
+for Alpaca and other devices controlled by the ESP. The Go gateway will implement the
+full Alpaca Focuser and the other needed interfaces.
 
 ## Telemetry
 

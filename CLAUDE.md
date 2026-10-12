@@ -4,14 +4,11 @@ Keep this file in a simple format so it can be read and edited quickly.
 
 ## Reference projects
 
-This firmware is based on the sibling mount project:
-
-- **`~/Dev/nrm_ha`** — ESP32-S3 equatorial mount firmware. Source of style,
-  programming rules and architectural pattern. It has the LED/motor logic,
-  TMC2209 (branch `HAv2_TMC`), 12 V detection and the USB CDC-ACM serial
-  protocol this project largely copies.
-- **`~/Dev/nrm_ha_go`** — Go gateway (Alpaca/UI). Future: will expose Alpaca
-  Focuser for this project. Out of scope for now.
+- **`~/Dev/nrm_ha`** — ESP32-S3 equatorial mount firmware. Reference for the
+  LED/motor logic, the TMC2209 driver (`HAv2_TMC` branch), 12 V detection and
+  the USB CDC-ACM serial protocol.
+- **`~/Dev/nrm_ha_go`** — Go gateway (Alpaca/UI). Will expose the Alpaca Focuser
+  for this project. Out of scope for now.
 
 ## Project definition
 
@@ -21,7 +18,7 @@ This firmware is based on the sibling mount project:
   ambient temperature/humidity (SHT31, I2C), vibration (ADXL345, I2C).
 - 12 V supply (TMC2209, ESP and fan); the ESP is also powered over USB.
 - 3 status LEDs (board, focuser, fan).
-- USB CDC-ACM communication with JSON messages (like NRM-HA).
+- USB CDC-ACM communication with JSON messages.
 - Hardware detail in `README.md`.
 
 ## Architecture
@@ -90,4 +87,4 @@ session, `config/set` with persistence, and the Go gateway. Contract in
 - **UPPER_CASE** for macros and defines
 - **Headers**: `#pragma once`, includes organized: the module's own first, then framework libraries
 - **Logging**: `ESP_LOGI()`, `ESP_LOGW()`, `ESP_LOGE()` with a static tag per file
-- **Results between layers**: use per-module `Result` types with the `{ ok, message }` shape (the `MountResult` pattern from NRM-HA)
+- **Results between layers**: use per-module `Result` types with the `{ ok, message }` shape

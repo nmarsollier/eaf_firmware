@@ -1,7 +1,7 @@
 # Focuser protocol (USB CDC-ACM)
 
-Serial contract between the PC (Go gateway) and the focuser's ESP32-S3. It keeps the
-NRM-HA transport and identifies itself through the unified `capabilities` handshake
+Serial contract between the PC (Go gateway) and the focuser's ESP32-S3. It uses the
+unified transport and identifies itself through the `capabilities` handshake
 (`device_type="accessories"`, `proto=2`).
 
 ## Transport and framing
