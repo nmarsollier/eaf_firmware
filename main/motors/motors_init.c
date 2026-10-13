@@ -24,6 +24,9 @@ MotorsState motors_state = {
 /* Spinlock guarding the int64_t position counter and status. */
 portMUX_TYPE motors_state_lock = portMUX_INITIALIZER_UNLOCKED;
 
+/* Motion-settled semaphore — created in motors_init(), waited on by motors_stop(). */
+SemaphoreHandle_t motors_idle_sem = NULL;
+
 esp_err_t motors_init(void) {
     esp_err_t err = motors_hw_init();
     if (err != ESP_OK) {
@@ -44,6 +47,13 @@ esp_err_t motors_init(void) {
         ESP_LOGE(TAG, "motors_queue_init: %s", esp_err_to_name(err));
         motors_enter_hardware_fault();
         return err;
+    }
+
+    motors_idle_sem = xSemaphoreCreateBinary();
+    if (motors_idle_sem == NULL) {
+        ESP_LOGE(TAG, "xSemaphoreCreateBinary failed");
+        motors_enter_hardware_fault();
+        return ESP_ERR_NO_MEM;
     }
 
     err = motors_motion_task_init();

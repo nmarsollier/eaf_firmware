@@ -107,6 +107,10 @@ static bool emit_steps(uint32_t period_ticks, uint32_t count,
 
 static void run_move(int64_t target, uint32_t generation)
 {
+    if (generation != motors_stop_generation) {
+        return;  /* aborted before the move started */
+    }
+
     int64_t distance = target - read_position();
     if (distance == 0) {
         return;
@@ -171,7 +175,11 @@ static void motion_task(void *arg) {
             target = read_position() + cmd.target_steps;
         }
 
+        /* Clear any stale idle signal, run the move, then signal that it
+         * settled (completed or aborted). motors_stop() waits on this. */
+        xSemaphoreTake(motors_idle_sem, 0);
         run_move(target, cmd.generation);
+        xSemaphoreGive(motors_idle_sem);
     }
 }
 

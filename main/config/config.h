@@ -46,6 +46,18 @@
 #define TMC_STEP_GPIO   GPIO_NUM_16    /* STEP — focuser motion */
 #define TMC_DIR_GPIO    GPIO_NUM_15    /* DIR — focuser motion */
 
+/* Primary-mirror fan — Noctua NF-A8 PWM + 12 V relay.
+ * PWM drives the fan speed input (25 kHz) through an open-drain N-MOSFET;
+ * the relay switches the fan's 12 V supply. */
+#define FAN_PWM_GPIO           GPIO_NUM_14
+#define FAN_RELAY_GPIO         GPIO_NUM_13
+/* Fan status LED — brightness follows fan speed (off when unpowered).
+ * GPIO 42 (JTAG MTMS): free on this board — JTAG debug goes over USB-Serial/JTAG.
+ * Avoid 48 = RGB LED, 38 = builtin LED, 19/20 = USB, 0/45/46 = strap. */
+#define FAN_LED_GPIO           GPIO_NUM_35
+/* Relay coil polarity: 1 = active-high module, 0 = active-low module. */
+#define FAN_RELAY_ACTIVE_LEVEL 1
+
 /* =========================================================================
  * Focuser motion profile (tunable).
  * ========================================================================= */

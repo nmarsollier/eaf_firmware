@@ -45,12 +45,12 @@ static void state_device(char *out, size_t cap, uint32_t id, const char *session
     proto_env_begin(out, cap, &len, "state", id, session, true);
     proto_buf_append(out, cap, &len,
         ",\"data\":{\"power_external_present\":%s,\"health\":\"%s\","
-        "\"focuser_busy\":%s,\"fan_mode\":\"%s\",\"sensor_health\":\"ok\","
+        "\"focuser_busy\":%s,\"fan_power\":%s,\"sensor_health\":\"ok\","
         "\"reset_reason\":\"%s\",\"faults\":[",
         power ? "true" : "false",
         fault ? "fault" : "ok",
         ms.status == MOTORS_STATUS_MOVING ? "true" : "false",
-        fan_get_mode(), reset_reason_str());
+        fan_get_power() ? "true" : "false", reset_reason_str());
 
     if (fault) {
         proto_buf_append(out, cap, &len,
@@ -96,23 +96,23 @@ static void state_focuser(char *out, size_t cap, uint32_t id, const char *sessio
 /* ── state / fan ───────────────────────────────────────────── */
 
 static void state_fan(char *out, size_t cap, uint32_t id, const char *session) {
-    const char *mode = fan_get_mode();
-    int pwm = fan_get_output_pwm_pct();
-    bool relay = fan_get_relay_command();
-    const char *stage = (strcmp(mode, "off") == 0) ? "off" : "manual";
+    bool power = fan_get_power();
+    int speed = fan_get_speed();
+    int rpm = fan_get_rpm();
 
     size_t len = 0;
     out[0] = '\0';
     proto_env_begin(out, cap, &len, "state", id, session, true);
     proto_buf_append(out, cap, &len,
-        ",\"data\":{\"error\":null,\"mode\":\"%s\",\"mode_rev\":0,\"source\":\"alpaca\","
-        "\"output_pwm_pct\":%d,\"target_pwm_pct\":%d,\"relay_command\":%s,"
-        "\"power_available\":%s,\"delta_c\":null,\"thermal_stage\":\"%s\","
-        "\"reason\":\"manual_mode\",\"last_change_ms\":0}}",
-        mode, pwm, pwm,
-        relay ? "true" : "false",
-        board_has_external_power() ? "true" : "false",
-        stage);
+        ",\"data\":{\"error\":null,\"power\":%s,\"speed\":%d,"
+        "\"power_available\":%s,\"rpm\":",
+        power ? "true" : "false", speed,
+        board_has_external_power() ? "true" : "false");
+    if (rpm >= 0) {
+        proto_buf_append(out, cap, &len, "%d}}", rpm);
+    } else {
+        proto_buf_append(out, cap, &len, "null}}");
+    }
 }
 
 /* ── state / environment ───────────────────────────────────── */

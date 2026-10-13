@@ -73,3 +73,8 @@ const char *motors_status_to_string(MotorsStatus status);
 
 /* True if `status` is the fatal error state (motor fault). */
 bool motors_status_is_error(MotorsStatus status);
+
+/* True if a latched hardware fault occurred (e.g. TMC init failed with power
+ * present). A power-loss ERROR does not set this — use it to tell a real
+ * driver fault apart from a missing 12 V rail. */
+bool motors_has_hardware_fault(void);

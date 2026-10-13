@@ -1,7 +1,8 @@
 /* Led — led_init.c
  *
  * Purpose: initialise every status LED's LEDC PWM channel. Each LED owns its
- * own timer (board = timer 0, focuser = timer 1, fan = timer 2 when wired).
+ * own timer (board = timer 0, focuser = timer 1, fan = timer 3; timer 2 is
+ * the fan PWM).
  */
 #include "led_internal.h"
 
@@ -10,11 +11,13 @@
 LedConfig led_configs[LED_COUNT] = {
     [LED_ID_BOARD]   = { .timer = LEDC_TIMER_0, .channel = LEDC_CHANNEL_0, .gpio = BOARD_LED_GPIO },
     [LED_ID_FOCUSER] = { .timer = LEDC_TIMER_1, .channel = LEDC_CHANNEL_1, .gpio = FOCUSER_LED_GPIO },
+    [LED_ID_FAN]     = { .timer = LEDC_TIMER_3, .channel = LEDC_CHANNEL_3, .gpio = FAN_LED_GPIO },
 };
 
 LedState led_states[LED_COUNT] = {
     [LED_ID_BOARD]   = LED_STATE_DIM,
     [LED_ID_FOCUSER] = LED_STATE_DIM,
+    [LED_ID_FAN]     = LED_STATE_DIM,
 };
 
 void led_init(void) {

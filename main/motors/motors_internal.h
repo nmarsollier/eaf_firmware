@@ -16,6 +16,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 #include "freertos/portmacro.h"
+#include "freertos/semphr.h"
 
 /* =========================================================================
  * Motion command queue.
@@ -34,6 +35,10 @@ typedef struct {
 
 /* Queue handle — created by motors_queue_init(), shared across the module. */
 extern QueueHandle_t motion_cmd_queue;
+
+/* Binary semaphore — signaled by the motion task when a move settles (done or
+ * aborted). motors_stop() waits on it so a stop returns with the final counter. */
+extern SemaphoreHandle_t motors_idle_sem;
 
 /* Stop epoch — incremented on every stop so queued commands can be
  * invalidated. Monotonic uint32. */
@@ -99,7 +104,6 @@ extern MotorsState motors_state;
 /* Hardware-fault latch — set by motors_init() failure paths; a latched fault
  * is never cleared by a power-loss recovery (motors_enter_error_state.c). */
 void motors_enter_hardware_fault(void);
-bool motors_has_hardware_fault(void);
 
 /* Mark the current ERROR as a recoverable power fault so a later power-on
  * re-initialises the driver (motors_power.c). */

@@ -61,6 +61,7 @@ bool proto_json_get_float(const char *json, const char *key, float *out);
 bool proto_json_get_int(const char *json, const char *key, int *out);
 bool proto_json_get_u32(const char *json, const char *key, uint32_t *out);
 bool proto_json_get_int64(const char *json, const char *key, int64_t *out);
+bool proto_json_get_bool(const char *json, const char *key, bool *out);
 bool proto_json_get_object(const char *json, const char *key, char *out, size_t cap);
 bool proto_buf_append(char *buf, size_t cap, size_t *len, const char *fmt, ...)
     __attribute__((format(printf, 4, 5)));

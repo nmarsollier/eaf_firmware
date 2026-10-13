@@ -1,6 +1,6 @@
 /* Proto — proto_action.c — ACTION: operations with a beginning and an end.
  *
- * Focuser move/halt are wired to the motors module; device restart reboots.
+ * Focuser move/stop are wired to the motors module; device restart reboots.
  * A retried request with the same id replays the original result instead of
  * re-executing (see proto_action_lookup/record).
  */
@@ -121,9 +121,9 @@ static void handle_move(const char *req, uint32_t id, const char *session,
             op->op_id, (long long) ms.position, (long long) op->target_counter);
 }
 
-/* ── focuser halt ──────────────────────────────────────────── */
+/* ── focuser stop ──────────────────────────────────────────── */
 
-static void handle_halt(uint32_t id, const char *session, char *out, size_t cap) {
+static void handle_stop(uint32_t id, const char *session, char *out, size_t cap) {
     motors_stop();
     proto_operation_cancel();
 
@@ -166,8 +166,8 @@ void proto_handle_action(const char *req, uint32_t id, char *out, size_t cap) {
 
     if (strcmp(target, "focuser") == 0 && strcmp(action, "move") == 0) {
         handle_move(req, id, session, out, cap);
-    } else if (strcmp(target, "focuser") == 0 && strcmp(action, "halt") == 0) {
-        handle_halt(id, session, out, cap);
+    } else if (strcmp(target, "focuser") == 0 && strcmp(action, "stop") == 0) {
+        handle_stop(id, session, out, cap);
     } else if (strcmp(target, "device") == 0 && strcmp(action, "restart") == 0) {
         handle_restart(id, session, out, cap);
     } else {

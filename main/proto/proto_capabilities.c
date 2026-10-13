@@ -24,11 +24,10 @@ void proto_handle_capabilities(const char *req, uint32_t id, char *out, size_t c
         "\"device_type\":\"accessories\",\"device_id\":\"nrm-eaf\","
         "\"name\":\"%s\",\"firmware_version\":\"0.1.0\","
         "\"capabilities\":{"
-        "\"focuser\":{\"relative_move\":true,\"signed_counter\":true,\"halt\":true,"
+        "\"focuser\":{\"relative_move\":true,\"signed_counter\":true,\"stop\":true,"
         "\"local_buttons\":false,\"tmc_uart\":true,\"encoder\":false,"
         "\"home_sensor\":false,\"temp_comp\":false},"
-        "\"fan\":{\"modes\":[\"normal\",\"soft\",\"off\"],\"pwm\":true,"
-        "\"relay\":true,\"tach\":false},"
+        "\"fan\":{\"power\":true,\"speed\":true,\"rpm\":false},"
         "\"sensors\":{\"ambient\":\"SHT31\",\"mirror\":\"DS18B20\","
         "\"vibration\":\"ADXL345\"}"
         "}}",

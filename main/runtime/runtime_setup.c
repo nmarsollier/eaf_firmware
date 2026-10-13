@@ -49,7 +49,7 @@ void setup_init(void) {
                  esp_err_to_name(motors_err));
     }
 
-    /* Mock subsystems (replaced when the real hardware is ported). */
+    /* Fan (PWM + relay), vibration (ADXL345), and the mock environment/inputs. */
     fan_init();
     environment_init();
     vibration_init();

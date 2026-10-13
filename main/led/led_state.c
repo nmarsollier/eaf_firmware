@@ -42,3 +42,9 @@ void led_set_state(LedId id, LedState state) {
         break;
     }
 }
+
+void led_set_duty(LedId id, uint32_t duty) {
+    const LedConfig *cfg = &led_configs[id];
+    ledc_set_duty(LED_MODE, cfg->channel, duty);
+    ledc_update_duty(LED_MODE, cfg->channel);
+}

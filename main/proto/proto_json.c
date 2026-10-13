@@ -474,6 +474,16 @@ bool proto_json_get_int64(const char *json, const char *key, int64_t *out) {
     return parse_i64_span(f.value, f.value_end, out);
 }
 
+bool proto_json_get_bool(const char *json, const char *key, bool *out) {
+    if (out == NULL) return false;
+    JsonField f;
+    if (!find_top_level(json, key, &f)) return false;
+    if (!f.found || f.duplicate) return false;
+    if (f.type == JSON_TRUE) { *out = true; return true; }
+    if (f.type == JSON_FALSE) { *out = false; return true; }
+    return false;
+}
+
 bool proto_json_get_object(const char *json, const char *key, char *out, size_t cap) {
     if (out == NULL || cap == 0) return false;
     JsonField f;

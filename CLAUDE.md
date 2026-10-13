@@ -31,32 +31,35 @@ Desktop app (Go) (Alpaca/UI) → USB CDC-ACM → Proto → Focuser → TMC2209/G
 
 - **config** (`main/config/`) — single source of truth for pins and build constants.
 - **board** (`main/board/`) — 12 V power sense.
-- **led** (`main/led/`) — every status LED (board, focuser, fan when wired).
+- **led** (`main/led/`) — every status LED (board, focuser, fan).
 - **tmc** (`main/tmc/`) — TMC2209 (single-wire UART + EN), re-init on 12 V return.
 - **motors** (`main/motors/`) — focuser motion (STEP/DIR, RMT, ramp).
 - **accelerometer** (`main/accelerometer/`) — ADXL345 over I2C.
 - **vibration** (`main/vibration/`) — per-axis movement figures from the ADXL345.
 - **usb_cdc** (`main/usb_cdc/`) — USB CDC-ACM transport.
 - **proto** (`main/proto/`) — `proto=2` protocol (framing, dispatch, handlers).
-- **fan / environment / inputs** (`main/*/`) — mocks (fixed values).
+- **fan** (`main/fan/`) — Noctua PWM + relay + speed LED.
+- **environment / inputs** (`main/*/`) — mocks (fixed values).
 - **runtime** (`main/runtime/`) — init and main loop.
 
 ## Current state
 
-Implemented: `board` (12 V sense), `led` (board + focuser LEDs), `tmc` (TMC2209
-with re-init on 12 V return), `motors` (motion), `accelerometer` (ADXL345) +
-`vibration` (per-axis movement figures), `usb_cdc` (transport) and `proto`
-(`proto=2` protocol with capabilities/state/action/config/control handlers).
-Mocks of `fan`, `environment` and `inputs`.
+Implemented: `board` (12 V sense), `led` (board + focuser + fan LEDs), `tmc`
+(TMC2209 with re-init on 12 V return), `motors` (motion), `accelerometer`
+(ADXL345) + `vibration` (per-axis movement figures), `usb_cdc` (transport),
+`proto` (`proto=2` protocol with capabilities/state/action/config/control
+handlers) and `fan` (Noctua PWM + relay). Mocks of `environment` and `inputs`.
 
-The board LED also flags an accelerometer/I2C fault (SDA/SCL) as error.
+LED behaviour: the board LED flags a missing 12 V rail or an I2C/accelerometer
+fault; the focuser LED flags a TMC driver fault; the fan LED brightness follows
+the fan speed. A power-loss error is shown only by the board LED.
 
 Two physical buttons are planned (not yet wired): focuser enable/disable and
-fan-mode toggle.
+fan power toggle.
 
-Pending: real fan, real sensors (DS18B20/SHT31), events/extended
-session, `config/set` with persistence, and the Go gateway. Contract in
-`main/proto/README.md`.
+Pending: fan automatic temperature control and power button, real sensors
+(DS18B20/SHT31), events/extended session, `config/set` with persistence, and
+the Go gateway. Contract in `main/proto/README.md`.
 
 ## General rules
 

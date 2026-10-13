@@ -1,7 +1,7 @@
 /* Proto — proto_operation.c — operation tracking (op_id / status / counters).
  *
  * A finite operation (a focuser move) gets an op_id unique per boot, and its
- * status advances running → completed (or cancelled on halt). The focuser state
+ * status advances running → completed (or cancelled on stop). The focuser state
  * handler reports it so the host can reconcile after a disconnect.
  */
 #include "proto_internal.h"
