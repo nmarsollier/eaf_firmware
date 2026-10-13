@@ -25,18 +25,20 @@ Electronic focuser for a Newtonian telescope with dedicated sensors.
 | `usb_cdc` | USB CDC-ACM transport (TinyUSB). | — |
 | `proto` | `proto=2`, `role="accessories"`, `schema="nrm-accessories"`; handlers `capabilities`/`state`/`action`/`config`/`control`. | — |
 | `fan` | Noctua NF-A8 PWM (25 kHz) + relay; modes `off`/`auto`/`manual`. | PWM `FAN_PWM_GPIO`, relay `FAN_RELAY_GPIO` |
-| mocks | `environment`, `inputs` (fixed values). | — |
+| `inputs` | Two local push buttons (active-low, debounced). | focuser `BUTTON_FOCUSER_ENABLE_GPIO`, fan `BUTTON_FAN_MODE_GPIO` |
+| mocks | `environment` (fixed values). | — |
 
 The protocol contract is documented in [`main/proto/README.md`](main/proto/README.md).
 
-Two physical buttons are planned (not yet wired):
+Two local push buttons (push-to-GND, active-low):
 
-1. focuser enable/disable toggle;
-2. fan mode cycle (off → auto → manual).
+1. focuser enable/disable toggle (GPIO 1) — enables/disables the TMC2209 (EN),
+   releasing the motor's holding torque so the focuser can be turned by hand;
+2. fan mode cycle (GPIO 2) — off → auto → manual → off.
 
 ### Pending
 
-- Fan mode button (cycle off/auto/manual) and RPM (tach).
+- Real fan RPM readback (tach).
 - Real sensors: DS18B20, SHT31.
 - Events/subscription, extended session (op_id dedup by content), `config/set` with persistence.
 - Go gateway (Alpaca Focuser V4 / ObservingConditions V2 / Switch V3) — separate repo: <https://github.com/nmarsollier/nrm_ha_go>.
@@ -74,8 +76,8 @@ circuit is the same for all three: LED cathode to GND, anode to a GPIO through a
 
 - Board LED — beacon (error) when 12 V is missing or the I2C bus (ADXL345) faults; dim otherwise.
 - Focuser LED — beacon on a TMC driver fault, bright while moving, dim when idle,
-  off when 12 V is missing. A missing 12 V rail is a board-level error, shown only
-  by the board LED.
+  off when 12 V is missing or the focuser is disabled. A missing 12 V rail is a
+  board-level error, shown only by the board LED.
 - Fan LED — brightness proportional to fan intensity (≈`FAN_MIN_PWM_PCT`–`FAN_MAX_PWM_PCT` % when running); off when unpowered or 12 V absent.
 
 ## EAF
@@ -86,8 +88,9 @@ The autofocus is the main function of this circuit.
 - The exact reduction and movement per step are not yet calibrated.
 - Motion uses STEP/DIR over RMT with a trapezoidal acceleration ramp
   (`move_to`, `move_by`, `stop`), driven by the TMC2209.
-- EN, STEP and DIR go straight to GPIOs. EN is toggled from the Go UI and, later, from a
-  push button. Focuser state is shown on an LED.
+- EN, STEP and DIR go straight to GPIOs. EN is toggled from the local enable/disable
+  button or from the Go UI (`control / focuser / enabled`). Focuser state is shown
+  on an LED.
 
 The TMC2209 uses single-wire UART (a 1 kΩ resistor between the TMC TX and the two ESP
 GPIOs) to configure `MICROSTEPS` microsteps and 0.8 A for smooth, silent operation.
@@ -101,6 +104,9 @@ manual → off); the mode is also settable from the protocol.
 - Speed is set with PWM on a GPIO at 25 kHz. The fan's PWM input has an internal
   5 V pull-up, so the 3.3 V GPIO drives it through an open-drain N-MOSFET (2N7002).
 - Speed range: `FAN_SPEED_MIN`–`FAN_SPEED_MAX`, mapped linearly to `FAN_MIN_PWM_PCT`–`FAN_MAX_PWM_PCT` % PWM (≈450–2200 RPM); 0 % stops it.
+- The protocol reports a **theoretical RPM** (`state/fan` → `rpm`) derived from the
+  PWM duty and Noctua's published 450–2200 RPM curve (0 when off). It is an
+  estimate until the tachometer is wired.
 - `manual` mode uses the speed set by the client; `auto` computes it from the
   mirror/ambient delta: `FAN_SPEED_MAX` above the threshold + hysteresis, `FAN_SPEED_MIN` below it.
   Threshold (`FAN_AUTO_THRESHOLD_C`) and hysteresis (±`FAN_AUTO_HYSTERESIS_C`) are tunable in `config.h`.

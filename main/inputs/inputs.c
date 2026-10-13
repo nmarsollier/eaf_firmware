@@ -1,12 +1,100 @@
-/* Inputs — inputs.c — mock local button state.
+/* Inputs — inputs.c — local push buttons.
  *
- * No buttons are wired yet, so everything reports released. Replaced by GPIO
- * reads with debounce when the buttons are ported.
+ * Two push-to-GND buttons (active-low): the focuser enable/disable toggle and
+ * the fan mode cycle. Each button is read on the runtime loop, debounced, and
+ * its press edge triggers the corresponding action.
  */
 #include "inputs.h"
 
-void inputs_init(void) {
+#include "config.h"
+#include "driver/gpio.h"
+#include "esp_err.h"
+#include "esp_log.h"
+#include "fan.h"
+#include "motors.h"
+
+static const char *TAG = "INPUTS";
+
+/* Samples a level change must persist before it is accepted. At the 200 ms
+ * runtime-loop cadence contact bounce (a few ms) never spans a full sample, so
+ * one sample is enough to reject glitches while keeping the press responsive. */
+#define BUTTON_DEBOUNCE_SAMPLES 1
+
+typedef struct {
+    bool pressed;   /* current debounced level */
+    uint8_t count;  /* consecutive samples differing from `pressed` */
+} Button;
+
+static Button s_focuser_button;
+static Button s_fan_button;
+
+/* Button bridges the pin to GND, so pressed == LOW. */
+static bool read_raw(gpio_num_t pin) {
+    return gpio_get_level(pin) == 0;
 }
 
-bool inputs_focuser_enable_pressed(void) { return false; }
-bool inputs_fan_mode_pressed(void)       { return false; }
+/* Advance the debouncer and report whether a press edge occurred. */
+static bool debounce(Button *b, bool raw) {
+    bool was_pressed = b->pressed;
+
+    if (raw == b->pressed) {
+        b->count = 0;
+    } else if (++b->count >= BUTTON_DEBOUNCE_SAMPLES) {
+        b->pressed = raw;
+        b->count = 0;
+    }
+
+    return b->pressed && !was_pressed;
+}
+
+/* Next fan mode in the cycle off → auto → manual → off. */
+static FanMode next_fan_mode(FanMode mode) {
+    switch (mode) {
+    case FAN_MODE_OFF:    return FAN_MODE_AUTO;
+    case FAN_MODE_AUTO:   return FAN_MODE_MANUAL;
+    case FAN_MODE_MANUAL: return FAN_MODE_OFF;
+    default:              return FAN_MODE_AUTO;
+    }
+}
+
+void inputs_init(void) {
+    gpio_config_t config = {
+        .pin_bit_mask = (1ULL << BUTTON_FOCUSER_ENABLE_GPIO)
+                      | (1ULL << BUTTON_FAN_MODE_GPIO),
+        .mode = GPIO_MODE_INPUT,
+        .pull_up_en = GPIO_PULLUP_ENABLE,
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+        .intr_type = GPIO_INTR_DISABLE,
+    };
+    ESP_ERROR_CHECK(gpio_config(&config));
+
+    ESP_LOGI(TAG, "buttons on GPIO %d (focuser) and %d (fan), active-low",
+             (int)BUTTON_FOCUSER_ENABLE_GPIO, (int)BUTTON_FAN_MODE_GPIO);
+}
+
+void inputs_update(void) {
+    bool focuser_press = debounce(&s_focuser_button,
+                                  read_raw(BUTTON_FOCUSER_ENABLE_GPIO));
+    bool fan_press = debounce(&s_fan_button, read_raw(BUTTON_FAN_MODE_GPIO));
+
+    if (focuser_press) {
+        bool enabled = !motors_is_enabled();
+        motors_set_enabled(enabled);
+        ESP_LOGI(TAG, ">>> BUTTON focuser pressed -> focuser %s",
+                 enabled ? "enabled" : "disabled");
+    }
+
+    if (fan_press) {
+        fan_set_mode(next_fan_mode(fan_get_mode()));
+        ESP_LOGI(TAG, ">>> BUTTON fan pressed -> mode %s",
+                 fan_mode_to_string(fan_get_mode()));
+    }
+}
+
+bool inputs_focuser_enable_pressed(void) {
+    return s_focuser_button.pressed;
+}
+
+bool inputs_fan_mode_pressed(void) {
+    return s_fan_button.pressed;
+}

@@ -9,6 +9,7 @@
 
 #include "board.h"
 #include "fan.h"
+#include "inputs.h"
 #include "led.h"
 #include "motors.h"
 #include "proto.h"
@@ -32,6 +33,7 @@ static void main_loop_task(void *arg) {
         board_update();
         motors_update_power(board_has_external_power());
         fan_update();
+        inputs_update();
         proto_poll();
         vibration_update();
         led_update();

@@ -52,8 +52,20 @@
 #define FAN_SPEED_MIN         1      /* user speed at FAN_MIN_PWM_PCT (≈450 RPM) */
 #define FAN_MIN_PWM_PCT       20     /* Noctua minimum duty (≈450 RPM) */
 #define FAN_MAX_PWM_PCT       100    /* full duty (2200 RPM) */
+#define FAN_RPM_MIN           450    /* NF-A8 PWM at FAN_MIN_PWM_PCT */
+#define FAN_RPM_MAX           2200   /* NF-A8 PWM at FAN_MAX_PWM_PCT */
 #define FAN_AUTO_THRESHOLD_C   1.0f  /* delta that switches the fan to max speed */
 #define FAN_AUTO_HYSTERESIS_C  0.1f  /* half-band: max at T+h, min at T−h */
+
+/* =========================================================================
+ * Local buttons — push-to-GND (active-low, internal pull-ups).
+ * ========================================================================= */
+
+/* Focuser enable/disable toggle. */
+#define BUTTON_FOCUSER_ENABLE_GPIO  GPIO_NUM_1
+
+/* Fan mode cycle (off → auto → manual → off). */
+#define BUTTON_FAN_MODE_GPIO        GPIO_NUM_2
 
 /* =========================================================================
  * Focuser motion profile (tunable).

@@ -52,8 +52,8 @@ device-specific capabilities:
  "capabilities":{
    "focuser":{"relative_move":true,"signed_counter":true,"stop":true,
               "local_buttons":false,"tmc_uart":true,"encoder":false,
-              "home_sensor":false,"temp_comp":false},
-   "fan":{"mode":["off","auto","manual"],"speed":true,"rpm":false},
+              "home_sensor":false,"temp_comp":false,"enable":true},
+   "fan":{"mode":["off","auto","manual"],"speed":true,"rpm":true},
    "sensors":{"ambient":"SHT31","mirror":"DS18B20","vibration":"ADXL345"}}}
 ```
 
@@ -66,24 +66,26 @@ device-specific capabilities:
 |---|---|
 | `capabilities` | Unified handshake header + device-specific capabilities (real). |
 | `state / device` | `power_external_present`, `health`, `focuser_busy`, `fan_mode`, `faults[]` (real). |
-| `state / focuser` | `counter_steps`, `is_moving`, `op_id`, counters, `driver.uart_ok` (real). |
+| `state / focuser` | `counter_steps`, `enabled`, `is_moving`, `op_id`, counters, `driver.uart_ok` (real). |
 | `action / focuser / move` | `params.delta_steps` + `expected_counter` → `motors_move_by` (real). |
 | `action / focuser / stop` | `motors_stop` (real). |
 | `action / device / restart` | Deferred reboot (real). |
-| `state / fan` | `mode`, `power`, `speed`, `manual_speed`, `rpm`, `power_available` (real; `rpm` `null` until tach wired). |
+| `state / fan` | `mode`, `power`, `speed`, `manual_speed`, `rpm`, `power_available` (real; `rpm` is a theoretical estimate from the PWM duty until the tach is wired). |
 | `state / vibration` | Per-axis RMS from the ADXL345 (real). |
-| `state / environment`, `inputs` | Mocks (fixed values). |
+| `state / environment` | Mock (fixed values). |
+| `state / inputs` | Button press states (real, debounced). |
 | `state / operation` | Last operation's status. |
 | `config / <group> / get` | Read-only mock; `set` → `NOT_SUPPORTED`. |
 | `control / fan / mode` | `params.value` (`off`/`auto`/`manual`). |
 | `control / fan / speed` | `params.value` (`FAN_SPEED_MIN`–`FAN_SPEED_MAX`) → manual PWM (applied in MANUAL). |
+| `control / focuser / enabled` | `params.value` (`true`/`false`) → `motors_set_enabled`. |
 | `control / device / session_open`, `heartbeat` | Minimal, no real lease enforcement. |
 
 ## Error codes (strings)
 
 `INVALID_ARGUMENT`, `OUT_OF_RANGE`, `NOT_SUPPORTED`, `NOT_CONNECTED`, `BUSY`,
-`COUNTER_CHANGED`, `POWER_ABSENT`, `DRIVER_FAULT`, `SENSOR_FAULT`, `STALE_DATA`,
-`INTERNAL`, `ID_CONFLICT`.
+`COUNTER_CHANGED`, `POWER_ABSENT`, `DRIVER_FAULT`, `DISABLED`, `SENSOR_FAULT`,
+`STALE_DATA`, `INTERNAL`, `ID_CONFLICT`.
 
 ## State error model
 
@@ -106,4 +108,4 @@ one faulty sensor only degrades its own `state` target.
 Events/subscription and push; real lease/heartbeat; op_id dedup by content
 (`OUTCOME_UNKNOWN`/`ID_CONFLICT`); `jog`, `guard`, `identify`, `clear_fault`,
 `driver_status`, `environment/refresh`, `vibration/enable|baseline|capture`;
-`config/set` with persistence; fan RPM (tach), fan mode button, and real sensors.
+`config/set` with persistence; fan RPM (tach), real RPM readback and real sensors.

@@ -73,6 +73,29 @@ static void handle_fan_speed(const char *req, uint32_t id, const char *session,
              "fan speed requires params.value (1..100)");
 }
 
+/* ── control / focuser / enabled ──────────────────────────── */
+
+static void handle_focuser_enabled(const char *req, uint32_t id, const char *session,
+                                   char *out, size_t cap) {
+    char params[256];
+    bool enabled = false;
+
+    if (proto_json_get_object(req, "params", params, sizeof(params)) &&
+        proto_json_get_bool(params, "value", &enabled)) {
+        motors_set_enabled(enabled);
+
+        size_t len = 0;
+        out[0] = '\0';
+        proto_env_begin(out, cap, &len, "control", id, session, true);
+        proto_buf_append(out, cap, &len,
+            ",\"data\":{\"enabled\":%s}}",
+            motors_is_enabled() ? "true" : "false");
+        return;
+    }
+    emit_err(out, cap, "control", id, session, "INVALID_ARGUMENT",
+             "focuser enabled requires params.value (true|false)");
+}
+
 /* ── control / device / session_open & heartbeat (minimal) ─── */
 
 static void handle_session_open(uint32_t id, const char *session, char *out, size_t cap) {
@@ -111,6 +134,8 @@ void proto_handle_control(const char *req, uint32_t id, char *out, size_t cap) {
         handle_fan_mode(req, id, session, out, cap);
     } else if (strcmp(target, "fan") == 0 && strcmp(op, "speed") == 0) {
         handle_fan_speed(req, id, session, out, cap);
+    } else if (strcmp(target, "focuser") == 0 && strcmp(op, "enabled") == 0) {
+        handle_focuser_enabled(req, id, session, out, cap);
     } else if (strcmp(target, "device") == 0 && strcmp(op, "session_open") == 0) {
         handle_session_open(id, session, out, cap);
     } else if (strcmp(target, "device") == 0 && strcmp(op, "heartbeat") == 0) {

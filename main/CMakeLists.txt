@@ -28,6 +28,7 @@ idf_component_register(
         "motors/motors_power.c"
         "motors/motors_move.c"
         "motors/motors_stop.c"
+        "motors/motors_enable.c"
 
         "usb_cdc/usb_cdc_init.c"
         "usb_cdc/usb_cdc_rx.c"

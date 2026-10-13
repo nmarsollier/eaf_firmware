@@ -25,7 +25,8 @@ typedef enum {
 typedef enum {
     MOTOR_OK = 0,
     MOTOR_ERR_HARDWARE_ERROR,
-    MOTOR_ERR_BUSY
+    MOTOR_ERR_BUSY,
+    MOTOR_ERR_DISABLED
 } MotorResultCode;
 
 /*
@@ -68,6 +69,14 @@ MotorResultCode motors_move_by(int64_t steps);
 
 /* Stop the current motion and return to READY. */
 MotorResultCode motors_stop(void);
+
+/*
+ * Enable/disable the focuser driver (TMC2209 EN pin). Disabling releases the
+ * motor's holding torque so the focuser can be turned by hand, and rejects all
+ * motion until re-enabled. Toggled by the local enable/disable button.
+ */
+void motors_set_enabled(bool enabled);
+bool motors_is_enabled(void);
 
 const char *motors_status_to_string(MotorsStatus status);
 

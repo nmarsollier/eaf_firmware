@@ -39,7 +39,9 @@ uint8_t fan_get_intensity_pct(void);
 /* Relay state: on in every mode except OFF. */
 bool fan_get_power(void);
 
-/* Fan RPM from the tachometer; -1 while the tach is not wired. */
+/* Estimated fan RPM derived from the PWM duty (Noctua NF-A8 PWM published
+ * 450–2200 RPM range): 0 when off, 450–2200 otherwise. Theoretical — the
+ * tachometer is not wired yet. */
 int fan_get_rpm(void);
 
 /* "off" | "auto" | "manual". */

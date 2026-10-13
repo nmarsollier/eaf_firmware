@@ -25,6 +25,15 @@ static const char *motor_error_code(void) {
     return "DRIVER_FAULT";
 }
 
+/* Error code for a rejected move: a disabled focuser is distinct from a
+ * hardware fault or a missing rail. */
+static const char *move_error_code(MotorResultCode r) {
+    if (r == MOTOR_ERR_DISABLED) {
+        return "DISABLED";
+    }
+    return motor_error_code();
+}
+
 /* Delayed reboot: the handler returns and the response is flushed before this. */
 static void restart_timer_cb(void *arg) {
     (void) arg;
@@ -107,7 +116,7 @@ static void handle_move(const char *req, uint32_t id, const char *session,
 
     MotorResultCode r = motors_move_by(delta);
     if (r != MOTOR_OK) {
-        emit_err(out, cap, "action", id, session, motor_error_code(),
+        emit_err(out, cap, "action", id, session, move_error_code(r),
                  "move rejected");
         return;
     }

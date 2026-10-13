@@ -179,7 +179,15 @@ bool fan_get_power(void) {
 }
 
 int fan_get_rpm(void) {
-    return -1;  /* tachometer not wired yet */
+    uint8_t pwm = fan_get_intensity_pct();
+    if (pwm == 0) {
+        return 0;  /* fan off / stopped */
+    }
+    /* Noctua NF-A8 PWM: 450 RPM at 20 % duty, 2200 RPM at 100 % duty, linear
+     * in between. Theoretical until the tachometer is wired. */
+    return FAN_RPM_MIN
+        + (int)((uint32_t)(FAN_RPM_MAX - FAN_RPM_MIN) * (pwm - FAN_MIN_PWM_PCT))
+          / (FAN_MAX_PWM_PCT - FAN_MIN_PWM_PCT);
 }
 
 const char *fan_mode_to_string(FanMode mode) {

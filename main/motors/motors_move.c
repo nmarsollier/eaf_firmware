@@ -9,6 +9,9 @@ MotorResultCode motors_move_to(int64_t position) {
     if (motors_status_is_error(motors_state.status)) {
         return MOTOR_ERR_HARDWARE_ERROR;
     }
+    if (!motors_is_enabled()) {
+        return MOTOR_ERR_DISABLED;
+    }
 
     MotionCommand cmd = {
         .target_steps = position,
@@ -23,6 +26,9 @@ MotorResultCode motors_move_to(int64_t position) {
 MotorResultCode motors_move_by(int64_t steps) {
     if (motors_status_is_error(motors_state.status)) {
         return MOTOR_ERR_HARDWARE_ERROR;
+    }
+    if (!motors_is_enabled()) {
+        return MOTOR_ERR_DISABLED;
     }
 
     MotionCommand cmd = {

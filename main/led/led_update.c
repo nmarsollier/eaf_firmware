@@ -23,10 +23,10 @@ void led_update(void) {
     }
 
     /* Focuser LED: off when 12 V is missing (a board-level error shown only by
-     * the board LED), beacon on a TMC driver fault, bright while moving, dim
-     * when idle. */
+     * the board LED) or when the focuser is disabled; beacon on a TMC driver
+     * fault, bright while moving, dim when idle. */
     MotorsState ms = motors_current_state();
-    if (!board_has_external_power()) {
+    if (!board_has_external_power() || !motors_is_enabled()) {
         led_set_state(LED_ID_FOCUSER, LED_STATE_OFF);
     } else if (motors_status_is_error(ms.status) && motors_has_hardware_fault()) {
         led_set_state(LED_ID_FOCUSER, LED_STATE_BEACON);

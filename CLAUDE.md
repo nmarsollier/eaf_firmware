@@ -48,18 +48,19 @@ Implemented: `board` (12 V sense), `led` (board + focuser + fan LEDs), `tmc`
 (TMC2209 with re-init on 12 V return), `motors` (motion), `accelerometer`
 (ADXL345) + `vibration` (per-axis movement figures), `usb_cdc` (transport),
 `proto` (`proto=2` protocol with capabilities/state/action/config/control
-handlers) and `fan` (Noctua PWM + relay, modes off/auto/manual). Mocks of
-`environment` and `inputs`.
+handlers), `fan` (Noctua PWM + relay, modes off/auto/manual) and `inputs`
+(local buttons: focuser enable/disable + fan mode cycle). Mock of
+`environment`.
 
 LED behaviour: the board LED flags a missing 12 V rail or an I2C/accelerometer
-fault; the focuser LED flags a TMC driver fault (off when 12 V is missing); the
-fan LED brightness follows the fan intensity. A power-loss error is shown only by
-the board LED.
+fault; the focuser LED flags a TMC driver fault (off when 12 V is missing or the
+focuser is disabled); the fan LED brightness follows the fan intensity. A
+power-loss error is shown only by the board LED.
 
-Two physical buttons are planned (not yet wired): focuser enable/disable and
-fan mode cycle (off/auto/manual).
+Two physical buttons are wired (push-to-GND on GPIO 1 and 2): focuser
+enable/disable toggle and fan mode cycle (off/auto/manual).
 
-Pending: fan mode button, real sensors
+Pending: real sensors
 (DS18B20/SHT31), events/extended session, `config/set` with persistence, and
 the Go gateway. Contract in `main/proto/README.md`.
 

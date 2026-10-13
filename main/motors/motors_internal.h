@@ -66,6 +66,9 @@ esp_err_t motors_hw_init(void);
 
 void motors_hw_set_direction(MotorDirection direction);
 
+/* Drive the TMC2209 EN pin — LOW = enabled, HIGH = disabled. */
+void motors_hw_set_enabled(bool enabled);
+
 /* =========================================================================
  * RMT step pulse generation (motors_rmt.c).
  *
