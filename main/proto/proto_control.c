@@ -1,4 +1,4 @@
-/* Proto — proto_control.c — CONTROL: fan power/speed and minimal device
+/* Proto — proto_control.c — CONTROL: fan mode/speed and minimal device
  * session/heartbeat.
  */
 #include "proto_internal.h"
@@ -20,27 +20,29 @@ static void emit_err(char *out, size_t cap, const char *type, uint32_t id,
     proto_env_error(out, cap, &len, code, message);
 }
 
-/* ── control / fan / power ─────────────────────────────────── */
+/* ── control / fan / mode ──────────────────────────────────── */
 
-static void handle_fan_power(const char *req, uint32_t id, const char *session,
-                             char *out, size_t cap) {
+static void handle_fan_mode(const char *req, uint32_t id, const char *session,
+                            char *out, size_t cap) {
     char params[256];
-    bool value = false;
+    char mode[16] = {0};
+    FanMode m;
 
     if (proto_json_get_object(req, "params", params, sizeof(params)) &&
-        proto_json_get_bool(params, "value", &value)) {
-        fan_set_power(value);
+        proto_json_get_string(params, "value", mode, sizeof(mode)) &&
+        fan_mode_from_string(mode, &m)) {
+        fan_set_mode(m);
 
         size_t len = 0;
         out[0] = '\0';
         proto_env_begin(out, cap, &len, "control", id, session, true);
         proto_buf_append(out, cap, &len,
-            ",\"data\":{\"power\":%s}}",
-            value ? "true" : "false");
+            ",\"data\":{\"mode\":\"%s\"}}",
+            fan_mode_to_string(fan_get_mode()));
         return;
     }
     emit_err(out, cap, "control", id, session, "INVALID_ARGUMENT",
-             "fan power requires params.value (boolean)");
+             "fan mode requires params.value (off|auto|manual)");
 }
 
 /* ── control / fan / speed ─────────────────────────────────── */
@@ -52,9 +54,9 @@ static void handle_fan_speed(const char *req, uint32_t id, const char *session,
 
     if (proto_json_get_object(req, "params", params, sizeof(params)) &&
         proto_json_get_int(params, "value", &value)) {
-        if (value < 0 || value > 100) {
+        if (value < 1 || value > 100) {
             emit_err(out, cap, "control", id, session, "OUT_OF_RANGE",
-                     "fan speed must be 0..100");
+                     "fan speed must be 1..100");
             return;
         }
         fan_set_speed((uint8_t) value);
@@ -68,7 +70,7 @@ static void handle_fan_speed(const char *req, uint32_t id, const char *session,
         return;
     }
     emit_err(out, cap, "control", id, session, "INVALID_ARGUMENT",
-             "fan speed requires params.value (0..100)");
+             "fan speed requires params.value (1..100)");
 }
 
 /* ── control / device / session_open & heartbeat (minimal) ─── */
@@ -105,8 +107,8 @@ void proto_handle_control(const char *req, uint32_t id, char *out, size_t cap) {
     proto_json_get_string(req, "op", op, sizeof(op));
     get_session(req, session, sizeof(session));
 
-    if (strcmp(target, "fan") == 0 && strcmp(op, "power") == 0) {
-        handle_fan_power(req, id, session, out, cap);
+    if (strcmp(target, "fan") == 0 && strcmp(op, "mode") == 0) {
+        handle_fan_mode(req, id, session, out, cap);
     } else if (strcmp(target, "fan") == 0 && strcmp(op, "speed") == 0) {
         handle_fan_speed(req, id, session, out, cap);
     } else if (strcmp(target, "device") == 0 && strcmp(op, "session_open") == 0) {

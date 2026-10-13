@@ -27,7 +27,7 @@ void proto_handle_capabilities(const char *req, uint32_t id, char *out, size_t c
         "\"focuser\":{\"relative_move\":true,\"signed_counter\":true,\"stop\":true,"
         "\"local_buttons\":false,\"tmc_uart\":true,\"encoder\":false,"
         "\"home_sensor\":false,\"temp_comp\":false},"
-        "\"fan\":{\"power\":true,\"speed\":true,\"rpm\":false},"
+        "\"fan\":{\"mode\":[\"off\",\"auto\",\"manual\"],\"speed\":true,\"rpm\":false},"
         "\"sensors\":{\"ambient\":\"SHT31\",\"mirror\":\"DS18B20\","
         "\"vibration\":\"ADXL345\"}"
         "}}",

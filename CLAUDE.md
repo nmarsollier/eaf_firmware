@@ -38,7 +38,7 @@ Desktop app (Go) (Alpaca/UI) → USB CDC-ACM → Proto → Focuser → TMC2209/G
 - **vibration** (`main/vibration/`) — per-axis movement figures from the ADXL345.
 - **usb_cdc** (`main/usb_cdc/`) — USB CDC-ACM transport.
 - **proto** (`main/proto/`) — `proto=2` protocol (framing, dispatch, handlers).
-- **fan** (`main/fan/`) — Noctua PWM + relay + speed LED.
+- **fan** (`main/fan/`) — Noctua PWM + relay + modes (off/auto/manual).
 - **environment / inputs** (`main/*/`) — mocks (fixed values).
 - **runtime** (`main/runtime/`) — init and main loop.
 
@@ -48,16 +48,18 @@ Implemented: `board` (12 V sense), `led` (board + focuser + fan LEDs), `tmc`
 (TMC2209 with re-init on 12 V return), `motors` (motion), `accelerometer`
 (ADXL345) + `vibration` (per-axis movement figures), `usb_cdc` (transport),
 `proto` (`proto=2` protocol with capabilities/state/action/config/control
-handlers) and `fan` (Noctua PWM + relay). Mocks of `environment` and `inputs`.
+handlers) and `fan` (Noctua PWM + relay, modes off/auto/manual). Mocks of
+`environment` and `inputs`.
 
 LED behaviour: the board LED flags a missing 12 V rail or an I2C/accelerometer
-fault; the focuser LED flags a TMC driver fault; the fan LED brightness follows
-the fan speed. A power-loss error is shown only by the board LED.
+fault; the focuser LED flags a TMC driver fault (off when 12 V is missing); the
+fan LED brightness follows the fan intensity. A power-loss error is shown only by
+the board LED.
 
 Two physical buttons are planned (not yet wired): focuser enable/disable and
-fan power toggle.
+fan mode cycle (off/auto/manual).
 
-Pending: fan automatic temperature control and power button, real sensors
+Pending: fan mode button, real sensors
 (DS18B20/SHT31), events/extended session, `config/set` with persistence, and
 the Go gateway. Contract in `main/proto/README.md`.
 

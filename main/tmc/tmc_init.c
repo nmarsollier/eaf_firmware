@@ -33,19 +33,13 @@
 #define TMC_REG_TPWMTHRS   0x13
 #define TMC_REG_CHOPCONF   0x6C
 #define TMC_REG_DRV_STATUS 0x6F
+#define TMC_REG_PWMCONF    0x70
 
-/* StealthChop→SpreadCycle auto-transition threshold.
- *
- * With GCONF.en_SpreadCycle=0 (StealthChop base mode), this selects the
- * velocity at which the driver switches to SpreadCycle: StealthChop while
- * TSTEP >= TPWMTHRS (slow = silent), SpreadCycle while TSTEP < TPWMTHRS
- * (fast = more torque).
- *
- * Threshold: f_STEP = fCLK × µ / (256 × TPWMTHRS). With fCLK=12 MHz and
- * µ=16, TPWMTHRS=140 → ~5350 input steps/s: the focuser stays in silent
- * StealthChop across its whole (slow) range. Tune with the real motor.
+/* TPWMTHRS = 0: stay in StealthChop at every speed — the driver never falls
+ * back to the louder SpreadCycle. This is the quietest mode for a slow
+ * focuser; it trades away the extra high-speed torque of SpreadCycle.
  */
-#define TMC_TPWMTHRS_VALUE 140
+#define TMC_TPWMTHRS_VALUE 0
 
 /* ── Target microstep resolution — see MICROSTEPS in tmc.h ── */
 
@@ -315,9 +309,9 @@ static esp_err_t tmc_init_driver(const TmcAxis *axis)
     ESP_LOGI(TAG, "--- Initialising axis %s [UART %d, TX %d, RX %d] ---",
              axis->name, axis->uart_num, axis->tx_gpio, axis->rx_gpio);
 
-    /* ── GCONF: StealthChop base mode, SpreadCycle above TPWMTHRS ──
-     * en_SpreadCycle (bit 2) = 0 selects StealthChop as the base chopper
-     * (silent); TPWMTHRS below flips to SpreadCycle at speed.
+    /* ── GCONF: pure StealthChop (silent) ──
+     * en_SpreadCycle (bit 2) = 0 selects StealthChop; with TPWMTHRS = 0 the
+     * driver never falls back to the louder SpreadCycle.
      * mstep_reg_select (bit 7) = 1 takes microsteps from CHOPCONF.MRES;
      * pdn_disable (bit 6) = 1 keeps PDN_UART as a pure UART. */
     uint32_t gconf = 0x000000C0;
@@ -369,7 +363,7 @@ static esp_err_t tmc_init_driver(const TmcAxis *axis)
     ESP_LOGI(TAG, "%s: CHOPCONF verified — %u µsteps (0x%08lX)",
              axis->name, verified_msteps, (unsigned long)verify);
 
-    /* ── TPWMTHRS (write-only): silent↔loud transition point ── */
+    /* ── TPWMTHRS (write-only): 0 → stay in StealthChop at any speed ── */
     result = tmc_write_only_verified(axis, TMC_REG_TPWMTHRS, TMC_TPWMTHRS_VALUE);
     if (result != ESP_OK) {
         tmc_status = TMC_ERROR;
@@ -378,9 +372,30 @@ static esp_err_t tmc_init_driver(const TmcAxis *axis)
         return result;
     }
 
+    /* ── PWMCONF: silent StealthChop PWM ──
+     * PWM_AUTOSCALE + PWM_AUTOGRAD auto-tune the current regulation for the
+     * smoothest, quietest drive; PWM_FREQ = 1 → 35 kHz (inaudible). */
+    uint32_t pwmconf = (36U << 0)     /* PWM_OFS = 36 (default) */
+                     | (1U << 16)     /* PWM_FREQ = 1 → 35 kHz */
+                     | (1U << 18)     /* PWM_AUTOSCALE */
+                     | (1U << 19)     /* PWM_AUTOGRAD */
+                     | (8U << 24)     /* PWM_REG = 8 (smooth regulation) */
+                     | (12U << 28);   /* PWM_LIM = 12 (default) */
+    uint32_t pwmconf_mask = 0xFFU | (0xFFU << 8) | (0x3U << 16)
+                          | (1U << 18) | (1U << 19)
+                          | (0x3U << 20) | (0xFU << 24) | (0xFU << 28);
+    result = tmc_write_verified(axis, TMC_REG_PWMCONF, pwmconf, pwmconf_mask, &verify);
+    if (result != ESP_OK) {
+        tmc_status = TMC_ERROR;
+        tmc_error = TMC_ERROR_PWMCONF_VERIFY;
+        ESP_LOGE(TAG, "%s: PWMCONF write/verify failed (0x%08lX)", axis->name, (unsigned long)verify);
+        return result;
+    }
+    ESP_LOGI(TAG, "%s: PWMCONF verified — StealthChop auto-scale (0x%08lX)", axis->name, (unsigned long)verify);
+
     /* ── DRV_STATUS: confirm the chopper mode and cross-check IHOLD ──
-     * bit 30 (stealth): 1 = StealthChop, 0 = SpreadCycle. At standstill the
-     * driver is below TPWMTHRS → StealthChop is expected. CS_ACTUAL (bits
+     * bit 30 (stealth): 1 = StealthChop, 0 = SpreadCycle. With TPWMTHRS = 0
+     * the driver should stay in StealthChop at any speed. CS_ACTUAL (bits
      * 20:16) reflects IHOLD at standstill, cross-checking the IHOLD_IRUN write. */
     if (tmc_read_register(axis, TMC_REG_DRV_STATUS, &verify) == ESP_OK) {
         bool stealth = (verify & (1U << 30)) != 0;

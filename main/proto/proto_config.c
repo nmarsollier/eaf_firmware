@@ -7,6 +7,8 @@
 
 #include <string.h>
 
+#include "config.h"
+
 void proto_handle_config(const char *req, uint32_t id, char *out, size_t cap) {
     char op[PROTO_MAX_ACTION_LEN] = {0};
     char session[PROTO_MAX_SESSION_LEN] = {0};
@@ -20,10 +22,11 @@ void proto_handle_config(const char *req, uint32_t id, char *out, size_t cap) {
         proto_env_begin(out, cap, &len, "config", id, session, true);
         proto_buf_append(out, cap, &len,
             ",\"data\":{\"config_rev\":%lu,\"saved_rev\":%lu,"
-            "\"config\":{\"microsteps\":16,\"interpolation\":256,"
+            "\"config\":{\"microsteps\":%d,\"interpolation\":256,"
             "\"pwm_freq_hz\":25000}}}",
             (unsigned long) proto_config_rev(),
-            (unsigned long) proto_config_rev());
+            (unsigned long) proto_config_rev(),
+            MICROSTEPS);
     } else if (strcmp(op, "set") == 0) {
         proto_env_begin(out, cap, &len, "config", id, session, false);
         proto_env_error(out, cap, &len, "NOT_SUPPORTED",

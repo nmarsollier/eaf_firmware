@@ -8,8 +8,8 @@
 /*
  * Focuser motor subsystem — the single stepper axis driven by the TMC2209.
  *
- * Position is an int64_t absolute STEP-pulse counter (16 per full step,
- * TMC MRES=16). The exact steps-per-mm mapping is unknown and calibrated
+ * Position is an int64_t absolute STEP-pulse counter (8 per full step,
+ * TMC MRES=8). The exact steps-per-mm mapping is unknown and calibrated
  * later; the module only reasons in steps.
  */
 

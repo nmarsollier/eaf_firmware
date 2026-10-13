@@ -8,6 +8,7 @@
 #include "freertos/task.h"
 
 #include "board.h"
+#include "fan.h"
 #include "led.h"
 #include "motors.h"
 #include "proto.h"
@@ -30,6 +31,7 @@ static void main_loop_task(void *arg) {
     while (true) {
         board_update();
         motors_update_power(board_has_external_power());
+        fan_update();
         proto_poll();
         vibration_update();
         led_update();

@@ -49,9 +49,10 @@ void setup_init(void) {
                  esp_err_to_name(motors_err));
     }
 
-    /* Fan (PWM + relay), vibration (ADXL345), and the mock environment/inputs. */
-    fan_init();
+    /* Environment first so the fan can seed its AUTO speed from it, then the
+     * fan (PWM + relay), vibration (ADXL345), and the mock inputs. */
     environment_init();
+    fan_init();
     vibration_init();
     inputs_init();
 

@@ -1,17 +1,19 @@
-/* Fan — fan.c — Noctua NF-A8 PWM + 12 V relay, exposed as an Alpaca Switch.
+/* Fan — fan.c — Noctua NF-A8 PWM + 12 V relay.
  *
- * Drives the fan speed input on FAN_PWM_GPIO (25 kHz LEDC) and the relay on
- * FAN_RELAY_GPIO. The LEDC output is inverted in hardware because the MOSFET
- * that drives the fan's open-collector input inverts too: writing a duty of
- * N % makes the fan see N %.
+ * Three modes: OFF, AUTO and MANUAL. Drives the fan speed input on
+ * FAN_PWM_GPIO (25 kHz LEDC) and the relay on FAN_RELAY_GPIO. The LEDC output
+ * is inverted in hardware because the MOSFET that drives the fan's
+ * open-collector input inverts too: writing a duty of N % makes the fan see
+ * N %.
  */
 #include "fan.h"
 
-#include <stdint.h>
+#include <string.h>
 
 #include "config.h"
 #include "driver/gpio.h"
 #include "driver/ledc.h"
+#include "environment.h"
 #include "esp_err.h"
 #include "esp_log.h"
 
@@ -24,17 +26,38 @@ static const char *TAG = "FAN";
 #define FAN_PWM_DUTY_RES    LEDC_TIMER_8_BIT
 #define FAN_PWM_MAX_DUTY    255
 
-static bool s_power = false;
-static uint8_t s_speed = 0;
+static FanMode s_mode = FAN_MODE_AUTO;
+static uint8_t s_manual_speed = FAN_SPEED_MAX;
+static uint8_t s_effective_speed = 0;
 
-static void fan_apply_pwm(uint8_t pct) {
-    uint32_t duty = (uint32_t)pct * FAN_PWM_MAX_DUTY / 100;
+/* Map a user speed (1..FAN_SPEED_MAX) to a PWM duty percent. */
+static uint8_t speed_to_pwm_pct(uint8_t speed) {
+    if (speed <= 0) {
+        return 0;
+    }
+    if (speed >= FAN_SPEED_MAX) {
+        return FAN_MAX_PWM_PCT;
+    }
+    return (uint8_t)(FAN_MIN_PWM_PCT
+        + (uint32_t)(FAN_MAX_PWM_PCT - FAN_MIN_PWM_PCT)
+          * (speed - FAN_SPEED_MIN) / (FAN_SPEED_MAX - FAN_SPEED_MIN));
+}
+
+static void fan_apply_pwm(uint8_t speed) {
+    uint8_t pwm_pct = speed_to_pwm_pct(speed);
+    uint32_t duty = (uint32_t)pwm_pct * FAN_PWM_MAX_DUTY / 100;
     ledc_set_duty(FAN_LEDC_SPEED_MODE, FAN_LEDC_CHANNEL, duty);
     ledc_update_duty(FAN_LEDC_SPEED_MODE, FAN_LEDC_CHANNEL);
 }
 
 static void fan_apply_relay(bool on) {
     gpio_set_level(FAN_RELAY_GPIO, on ? FAN_RELAY_ACTIVE_LEVEL : !FAN_RELAY_ACTIVE_LEVEL);
+}
+
+/* Apply the current mode + speed to the hardware. */
+static void fan_apply(void) {
+    fan_apply_relay(s_mode != FAN_MODE_OFF);
+    fan_apply_pwm(s_mode == FAN_MODE_OFF ? 0 : s_effective_speed);
 }
 
 void fan_init(void) {
@@ -70,36 +93,107 @@ void fan_init(void) {
     };
     ESP_ERROR_CHECK(ledc_channel_config(&chan));
 
-    /* Power off, speed 0 — the fan stays stopped until commanded. */
-    fan_apply_relay(false);
-    fan_apply_pwm(0);
+    /* Boot in AUTO: seed the speed from the temperature delta and apply. */
+    fan_set_mode(FAN_MODE_AUTO);
 
     ESP_LOGI(TAG, "PWM GPIO %d @ 25 kHz, relay GPIO %d (active-%s)",
              (int)FAN_PWM_GPIO, (int)FAN_RELAY_GPIO,
              FAN_RELAY_ACTIVE_LEVEL ? "high" : "low");
 }
 
-void fan_set_power(bool on) {
-    s_power = on;
-    fan_apply_relay(on);
+/* Mirror − ambient delta that drives the AUTO mode. */
+static float fan_auto_delta(void) {
+    return environment_get_mirror_c() - environment_get_ambient_c();
+}
+
+void fan_update(void) {
+    if (s_mode != FAN_MODE_AUTO) {
+        return;
+    }
+
+    float delta = fan_auto_delta();
+
+    if (s_effective_speed == FAN_SPEED_MAX) {
+        /* Cooling at max: drop to min only below the lower hysteresis edge. */
+        if (delta <= FAN_AUTO_THRESHOLD_C - FAN_AUTO_HYSTERESIS_C) {
+            s_effective_speed = FAN_SPEED_MIN;
+        }
+    } else if (delta >= FAN_AUTO_THRESHOLD_C + FAN_AUTO_HYSTERESIS_C) {
+        /* Cooling at min: rise to max only above the upper hysteresis edge. */
+        s_effective_speed = FAN_SPEED_MAX;
+    }
+
+    fan_apply_pwm(s_effective_speed);
+}
+
+void fan_set_mode(FanMode mode) {
+    s_mode = mode;
+
+    if (mode == FAN_MODE_OFF) {
+        s_effective_speed = 0;
+    } else if (mode == FAN_MODE_MANUAL) {
+        s_effective_speed = s_manual_speed;
+    } else {
+        /* AUTO — re-seed the speed from the current delta so a switch from
+         * OFF/MANUAL immediately picks the right speed; fan_update() then
+         * maintains it with hysteresis (rise at T+h, drop at T−h). */
+        s_effective_speed = (fan_auto_delta() >= FAN_AUTO_THRESHOLD_C)
+                            ? FAN_SPEED_MAX : FAN_SPEED_MIN;
+    }
+
+    fan_apply();
+}
+
+FanMode fan_get_mode(void) {
+    return s_mode;
+}
+
+void fan_set_speed(uint8_t speed) {
+    if (speed < FAN_SPEED_MIN) {
+        speed = FAN_SPEED_MIN;
+    } else if (speed > FAN_SPEED_MAX) {
+        speed = FAN_SPEED_MAX;
+    }
+    s_manual_speed = speed;
+
+    if (s_mode == FAN_MODE_MANUAL) {
+        s_effective_speed = s_manual_speed;
+        fan_apply_pwm(s_effective_speed);
+    }
+}
+
+uint8_t fan_get_manual_speed(void) {
+    return s_manual_speed;
+}
+
+uint8_t fan_get_effective_speed(void) {
+    return s_effective_speed;
+}
+
+uint8_t fan_get_intensity_pct(void) {
+    return speed_to_pwm_pct(s_effective_speed);
 }
 
 bool fan_get_power(void) {
-    return s_power;
-}
-
-void fan_set_speed(uint8_t pct) {
-    if (pct > 100) {
-        pct = 100;
-    }
-    s_speed = pct;
-    fan_apply_pwm(pct);
-}
-
-uint8_t fan_get_speed(void) {
-    return s_speed;
+    return s_mode != FAN_MODE_OFF;
 }
 
 int fan_get_rpm(void) {
     return -1;  /* tachometer not wired yet */
+}
+
+const char *fan_mode_to_string(FanMode mode) {
+    switch (mode) {
+    case FAN_MODE_OFF:    return "off";
+    case FAN_MODE_AUTO:   return "auto";
+    case FAN_MODE_MANUAL: return "manual";
+    default:              return "off";
+    }
+}
+
+bool fan_mode_from_string(const char *s, FanMode *out) {
+    if (strcmp(s, "off") == 0)    { *out = FAN_MODE_OFF;    return true; }
+    if (strcmp(s, "auto") == 0)   { *out = FAN_MODE_AUTO;   return true; }
+    if (strcmp(s, "manual") == 0) { *out = FAN_MODE_MANUAL; return true; }
+    return false;
 }

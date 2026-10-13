@@ -36,6 +36,7 @@ typedef enum {
     LED_STATE_DIM,
     LED_STATE_BRIGHT,
     LED_STATE_BEACON,
+    LED_STATE_OFF,
 } LedState;
 
 /* Per-LED hardware configuration (defined in led_init.c). */

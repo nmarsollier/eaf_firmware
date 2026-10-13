@@ -22,11 +22,13 @@ void led_update(void) {
         led_set_state(LED_ID_BOARD, LED_STATE_BEACON);
     }
 
-    /* Focuser LED: hardware (driver) fault → beacon, moving → bright,
-     * idle or power-off → dim. A missing 12 V rail is a board-level error and
-     * is shown only by the board LED. */
+    /* Focuser LED: off when 12 V is missing (a board-level error shown only by
+     * the board LED), beacon on a TMC driver fault, bright while moving, dim
+     * when idle. */
     MotorsState ms = motors_current_state();
-    if (motors_status_is_error(ms.status) && motors_has_hardware_fault()) {
+    if (!board_has_external_power()) {
+        led_set_state(LED_ID_FOCUSER, LED_STATE_OFF);
+    } else if (motors_status_is_error(ms.status) && motors_has_hardware_fault()) {
         led_set_state(LED_ID_FOCUSER, LED_STATE_BEACON);
     } else if (ms.status == MOTORS_STATUS_MOVING) {
         led_set_state(LED_ID_FOCUSER, LED_STATE_BRIGHT);
@@ -34,11 +36,11 @@ void led_update(void) {
         led_set_state(LED_ID_FOCUSER, LED_STATE_DIM);
     }
 
-    /* Fan LED: brightness follows fan speed, but only when 12 V is present
+    /* Fan LED: brightness follows fan intensity, but only when 12 V is present
      * (the fan cannot run without it). */
     uint32_t fan_duty = 0;
     if (board_has_external_power() && fan_get_power()) {
-        fan_duty = (uint32_t)fan_get_speed() * LED_BRIGHT_DUTY / 100;
+        fan_duty = (uint32_t)fan_get_intensity_pct() * LED_BRIGHT_DUTY / 100;
     }
     led_set_duty(LED_ID_FAN, fan_duty);
 }

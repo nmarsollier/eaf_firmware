@@ -40,6 +40,9 @@ void led_set_state(LedId id, LedState state) {
     case LED_STATE_BEACON:
         led_beacon_start(id);
         break;
+    case LED_STATE_OFF:
+        led_start_fade(id, 0, LED_FADE_MS);
+        break;
     }
 }
 

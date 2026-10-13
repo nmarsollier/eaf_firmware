@@ -16,15 +16,15 @@ Electronic focuser for a Newtonian telescope with dedicated sensors.
 
 | Module | Role | Pins |
 |---|---|---|
-| `board` | 12 V power sense (ADC). 12 V missing → board LED in *beacon* (error). | 12 V on 17 |
-| `led` | All status LEDs (board + focuser + fan). | board 21, focuser 47, fan 35 |
-| `tmc` | TMC2209 over single-wire UART, init with verification and **re-init on 12 V return**. | EN 9, TX 18 (1 kΩ), RX 8, STEP 16, DIR 15 |
+| `board` | 12 V power sense (ADC). 12 V missing → board LED in *beacon* (error). | ADC `BOARD_POWER_ADC_CHANNEL` |
+| `led` | All status LEDs (board + focuser + fan). | board `BOARD_LED_GPIO`, focuser `FOCUSER_LED_GPIO`, fan `FAN_LED_GPIO` |
+| `tmc` | TMC2209 over single-wire UART, init with verification and **re-init on 12 V return**. | EN `TMC_EN_GPIO`, TX `TMC_TX_GPIO` (1 kΩ), RX `TMC_RX_GPIO`, STEP `TMC_STEP_GPIO`, DIR `TMC_DIR_GPIO` |
 | `motors` | Focuser motion: STEP/DIR over RMT with trapezoidal ramp, `move_to`/`move_by`/`stop`, power gating. | — |
-| `accelerometer` | ADXL345 over I2C (driver: init, probe, read). | SDA 5, SCL 4 |
+| `accelerometer` | ADXL345 over I2C (driver: init, probe, read). | SDA `I2C_SDA_GPIO`, SCL `I2C_SCL_GPIO` |
 | `vibration` | Per-axis movement figures (demeaned RMS in m/s²) from the ADXL345. | — |
 | `usb_cdc` | USB CDC-ACM transport (TinyUSB). | — |
 | `proto` | `proto=2`, `role="accessories"`, `schema="nrm-accessories"`; handlers `capabilities`/`state`/`action`/`config`/`control`. | — |
-| `fan` | Noctua NF-A8 PWM (25 kHz) + 12 V relay. | PWM 14, relay 13 |
+| `fan` | Noctua NF-A8 PWM (25 kHz) + relay; modes `off`/`auto`/`manual`. | PWM `FAN_PWM_GPIO`, relay `FAN_RELAY_GPIO` |
 | mocks | `environment`, `inputs` (fixed values). | — |
 
 The protocol contract is documented in [`main/proto/README.md`](main/proto/README.md).
@@ -32,11 +32,11 @@ The protocol contract is documented in [`main/proto/README.md`](main/proto/READM
 Two physical buttons are planned (not yet wired):
 
 1. focuser enable/disable toggle;
-2. fan power toggle.
+2. fan mode cycle (off → auto → manual).
 
 ### Pending
 
-- Fan automatic temperature control and power button.
+- Fan mode button (cycle off/auto/manual) and RPM (tach).
 - Real sensors: DS18B20, SHT31.
 - Events/subscription, extended session (op_id dedup by content), `config/set` with persistence.
 - Go gateway (Alpaca Focuser V4 / ObservingConditions V2 / Switch V3) — separate repo: <https://github.com/nmarsollier/nrm_ha_go>.
@@ -73,9 +73,10 @@ circuit is the same for all three: LED cathode to GND, anode to a GPIO through a
 100 Ω resistor; brightness is dimmed via PWM duty.
 
 - Board LED — beacon (error) when 12 V is missing or the I2C bus (ADXL345) faults; dim otherwise.
-- Focuser LED — beacon on a TMC driver fault, bright while moving, dim otherwise.
-  A missing 12 V rail is a board-level error, shown only by the board LED.
-- Fan LED — brightness proportional to fan speed (0–100 %); off when unpowered or 12 V absent.
+- Focuser LED — beacon on a TMC driver fault, bright while moving, dim when idle,
+  off when 12 V is missing. A missing 12 V rail is a board-level error, shown only
+  by the board LED.
+- Fan LED — brightness proportional to fan intensity (≈`FAN_MIN_PWM_PCT`–`FAN_MAX_PWM_PCT` % when running); off when unpowered or 12 V absent.
 
 ## EAF
 
@@ -89,17 +90,21 @@ The autofocus is the main function of this circuit.
   push button. Focuser state is shown on an LED.
 
 The TMC2209 uses single-wire UART (a 1 kΩ resistor between the TMC TX and the two ESP
-GPIOs) to configure 16 microsteps and 0.8 A for smooth, silent operation.
+GPIOs) to configure `MICROSTEPS` microsteps and 0.8 A for smooth, silent operation.
 
 ## Noctua NF-A8 PWM fan
 
-- The fan's 12 V supply is switched by a relay on a dedicated GPIO (the power channel).
-- Speed is set with PWM on a GPIO at 25 kHz (0–100 %). The fan's PWM input has an
-  internal 5 V pull-up, so the 3.3 V GPIO drives it through an open-drain N-MOSFET (2N7002).
-- A status LED mirrors the fan speed (brightness 0–100 %).
-- Exposed to the gateway as an Alpaca Switch: power (boolean) and speed (numeric 0–100).
-- Automatic temperature-based speed (fan follows the mirror/ambient delta) and the
-  power button are pending.
+Three modes: `off`, `auto` and `manual`. The button cycles them (off → auto →
+manual → off); the mode is also settable from the protocol.
+
+- The fan's 12 V supply is switched by a relay on a dedicated GPIO (off in `off` mode).
+- Speed is set with PWM on a GPIO at 25 kHz. The fan's PWM input has an internal
+  5 V pull-up, so the 3.3 V GPIO drives it through an open-drain N-MOSFET (2N7002).
+- Speed range: `FAN_SPEED_MIN`–`FAN_SPEED_MAX`, mapped linearly to `FAN_MIN_PWM_PCT`–`FAN_MAX_PWM_PCT` % PWM (≈450–2200 RPM); 0 % stops it.
+- `manual` mode uses the speed set by the client; `auto` computes it from the
+  mirror/ambient delta: `FAN_SPEED_MAX` above the threshold + hysteresis, `FAN_SPEED_MIN` below it.
+  Threshold (`FAN_AUTO_THRESHOLD_C`) and hysteresis (±`FAN_AUTO_HYSTERESIS_C`) are tunable in `config.h`.
+- A status LED mirrors the fan intensity (≈`FAN_MIN_PWM_PCT`–`FAN_MAX_PWM_PCT` % when running).
 
 ## Mirror temperature sensor — DS18B20
 
@@ -116,7 +121,7 @@ GPIOs) to configure 16 microsteps and 0.8 A for smooth, silent operation.
 
 ## ADXL345 accelerometer
 
-- I2C address 0x53.
+- I2C address `ADXL345_ADDR`.
 - Measures telescope vibrations.
 - Encapsulated with the temperature/humidity sensor, mounted on the telescope tube.
 - Initially statistics only, reported to Go. Could later analyze mount problems and

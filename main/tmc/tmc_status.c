@@ -44,6 +44,8 @@ const char *tmc2209_error_to_string(TmcError error) {
             return "chopconf_verify";
         case TMC_ERROR_TPWMTHRS_WRITE:
             return "tpwmthrs_write";
+        case TMC_ERROR_PWMCONF_VERIFY:
+            return "pwmconf_verify";
         case TMC_ERROR_NONE:
         default:
             return "none";

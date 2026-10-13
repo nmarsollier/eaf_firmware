@@ -56,7 +56,8 @@ typedef enum {
     TMC_ERROR_GCONF_WRITE,     /* GCONF write + readback */
     TMC_ERROR_IHOLD_WRITE,     /* IHOLD_IRUN write (IFCNT verify) */
     TMC_ERROR_CHOPCONF_VERIFY, /* CHOPCONF write + readback / MRES mismatch */
-    TMC_ERROR_TPWMTHRS_WRITE   /* TPWMTHRS write (IFCNT verify) */
+    TMC_ERROR_TPWMTHRS_WRITE,  /* TPWMTHRS write (IFCNT verify) */
+    TMC_ERROR_PWMCONF_VERIFY   /* PWMCONF write + readback */
 } TmcError;
 
 TmcStatus tmc2209_get_status(void);
