@@ -1,4 +1,4 @@
-# NRM-BFT-EAF — flash helper
+# eaf_firmware — flash helper
 #
 #   make flash         flash the firmware
 

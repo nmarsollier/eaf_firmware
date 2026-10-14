@@ -47,8 +47,8 @@ device-specific capabilities:
 ```json
 {"type":"capabilities","id":1,"ok":true,
  "boot_id":"0e86a327","proto":2,
- "device_type":"accessories","device_id":"nrm-eaf",
- "name":"NRM-EAF","firmware_version":"0.1.0",
+ "device_type":"accessories","device_id":"eaf",
+ "name":"EAF","firmware_version":"0.1.0",
  "capabilities":{
    "focuser":{"relative_move":true,"signed_counter":true,"stop":true,
               "local_buttons":false,"tmc_uart":true,"encoder":false,

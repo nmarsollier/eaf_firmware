@@ -1,13 +1,13 @@
-# NRM-BFT-EAF Development Rules
+# eaf_firmware Development Rules
 
 Keep this file in a simple format so it can be read and edited quickly.
 
 ## Reference projects
 
-- **`~/Dev/nrm_ha`** — ESP32-S3 equatorial mount firmware. Reference for the
-  LED/motor logic, the TMC2209 driver (`HAv2_TMC` branch), 12 V detection and
-  the USB CDC-ACM serial protocol.
-- **`~/Dev/nrm_ha_go`** — Go gateway (Alpaca/UI). Will expose the Alpaca Focuser
+- **`~/Dev/bft_firmware`** — ESP32-S3 fork equatorial mount firmware (the mount
+  this focuser pairs with). Reference for the LED/motor logic, 12 V detection
+  and the USB CDC-ACM serial protocol.
+- **`~/Dev/mount_panel`** — Go gateway (Alpaca/UI). Will expose the Alpaca Focuser
   for this project. Out of scope for now.
 
 ## Project definition

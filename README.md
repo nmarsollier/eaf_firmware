@@ -1,4 +1,4 @@
-# NRM-BFT-EAF — Electronic Focuser
+# eaf_firmware — Electronic Focuser
 
 Electronic focuser for a Newtonian telescope with dedicated sensors.
 
@@ -23,7 +23,7 @@ Electronic focuser for a Newtonian telescope with dedicated sensors.
 | `accelerometer` | ADXL345 over I2C (driver: init, probe, read). | SDA `I2C_SDA_GPIO`, SCL `I2C_SCL_GPIO` |
 | `vibration` | Per-axis movement figures (demeaned RMS in m/s²) from the ADXL345. | — |
 | `usb_cdc` | USB CDC-ACM transport (TinyUSB). | — |
-| `proto` | `proto=2`, `role="accessories"`, `schema="nrm-accessories"`; handlers `capabilities`/`state`/`action`/`config`/`control`. | — |
+| `proto` | `proto=2`, `role="accessories"`, `schema="eaf-accessories"`; handlers `capabilities`/`state`/`action`/`config`/`control`. | — |
 | `fan` | Noctua NF-A8 PWM (25 kHz) + relay; modes `off`/`auto`/`manual`. | PWM `FAN_PWM_GPIO`, relay `FAN_RELAY_GPIO` |
 | `inputs` | Two local push buttons (active-low, debounced). | focuser `BUTTON_FOCUSER_ENABLE_GPIO`, fan `BUTTON_FAN_MODE_GPIO` |
 | mocks | `environment` (fixed values). | — |
@@ -41,7 +41,7 @@ Two local push buttons (push-to-GND, active-low):
 - Real fan RPM readback (tach).
 - Real sensors: DS18B20, SHT31.
 - Events/subscription, extended session (op_id dedup by content), `config/set` with persistence.
-- Go gateway (Alpaca Focuser V4 / ObservingConditions V2 / Switch V3) — separate repo: <https://github.com/nmarsollier/nrm_ha_go>.
+- Go gateway (Alpaca Focuser V4 / ObservingConditions V2 / Switch V3) — separate repo: <https://github.com/nmarsollier/mount_panel>.
 
 ## Hardware
 

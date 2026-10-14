@@ -21,7 +21,7 @@ void proto_handle_capabilities(const char *req, uint32_t id, char *out, size_t c
     proto_buf_append(out, cap, &len,
         "{\"type\":\"capabilities\",\"id\":%lu,\"ok\":true,"
         "\"boot_id\":\"%s\",\"proto\":%d,"
-        "\"device_type\":\"accessories\",\"device_id\":\"nrm-eaf\","
+        "\"device_type\":\"accessories\",\"device_id\":\"eaf\","
         "\"name\":\"%s\",\"firmware_version\":\"0.1.0\","
         "\"capabilities\":{"
         "\"focuser\":{\"relative_move\":true,\"signed_counter\":true,\"stop\":true,"

@@ -1,5 +1,4 @@
-# main component — sources and REQUIRES are added as each module is ported
-# from NRM-HA.
+# main component — sources and REQUIRES grouped by module.
 idf_component_register(
         SRCS
         "main.c"

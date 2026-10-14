@@ -9,7 +9,7 @@
  */
 
 /* Focuser model identifier — reported in the serial protocol `capabilities`. */
-#define DEVICE_NAME "NRM-EAF"
+#define DEVICE_NAME "EAF"
 
 /* =========================================================================
  * Pin assignments

@@ -1,4 +1,4 @@
-# sdkconfig.defaults — project-specific overrides for NRM-BFT-EAF
+# sdkconfig.defaults — project-specific overrides for eaf_firmware
 # Applied automatically by idf.py build on top of ESP-IDF defaults.
 
 # Flash: 8 MB (TODO: confirm the board's flash size — N8/N16).
@@ -24,7 +24,7 @@ CONFIG_TINYUSB_DESC_USE_ESPRESSIF_VID=n
 CONFIG_TINYUSB_DESC_USE_DEFAULT_PID=n
 CONFIG_TINYUSB_DESC_CUSTOM_VID=0x303A
 CONFIG_TINYUSB_DESC_CUSTOM_PID=0x4001
-CONFIG_TINYUSB_DESC_MANUFACTURER_STRING="NRM"
+CONFIG_TINYUSB_DESC_MANUFACTURER_STRING="Nestor Marsollier"
 CONFIG_TINYUSB_DESC_PRODUCT_STRING="Focuser Serial"
 CONFIG_TINYUSB_DESC_SERIAL_STRING="000001"
 CONFIG_TINYUSB_DESC_CDC_STRING="Focuser Serial"

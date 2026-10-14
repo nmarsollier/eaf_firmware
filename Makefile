@@ -1,4 +1,4 @@
-# NRM-BFT-EAF — top-level convenience Makefile.
+# eaf_firmware — top-level convenience Makefile.
 #
 # Forwards the flash target to test/Makefile so it can be invoked from the
 # project root without `cd test`:
