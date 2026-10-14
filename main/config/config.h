@@ -16,10 +16,10 @@
  * ========================================================================= */
 
 /* Board status LED — direct GPIO, LEDC PWM (active-high: anode via 100 Ω). */
-#define BOARD_LED_GPIO          GPIO_NUM_21
+#define BOARD_LED_GPIO          GPIO_NUM_36
 
 /* Focuser status LED — reflects the TMC/focuser state. */
-#define FOCUSER_LED_GPIO        GPIO_NUM_47
+#define FOCUSER_LED_GPIO        GPIO_NUM_37
 
 /* External 12 V rail detection — GPIO 17 (ADC2_CH6). */
 #define BOARD_POWER_ADC_UNIT    ADC_UNIT_2
