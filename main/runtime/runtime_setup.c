@@ -9,9 +9,9 @@
 #include "nvs_flash.h"
 
 #include "board.h"
+#include "buttons.h"
 #include "environment.h"
 #include "fan.h"
-#include "inputs.h"
 #include "led.h"
 #include "motors.h"
 #include "tmc.h"
@@ -50,11 +50,11 @@ void setup_init(void) {
     }
 
     /* Environment first so the fan can seed its AUTO speed from it, then the
-     * fan (PWM + relay), vibration (ADXL345), and the mock inputs. */
+     * fan (PWM + relay), vibration (ADXL345), and the buttons. */
     environment_init();
     fan_init();
     vibration_init();
-    inputs_init();
+    buttons_init();
 
     /* USB CDC-ACM transport — the protocol is wired to it by proto_init(). */
     esp_err_t cdc_result = usb_cdc_init();

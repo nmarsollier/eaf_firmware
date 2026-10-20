@@ -31,7 +31,7 @@ Response (`ok:true` + `data`, or `ok:false` + `error`):
 ```
 
 - `type`: `capabilities` | `state` | `config` | `control` | `action`.
-- `target`: `device` | `focuser` | `fan` | `environment` | `vibration` | `inputs` | `operation`.
+- `target`: `device` | `focuser` | `fan` | `environment` | `vibration` | `buttons` | `operation`.
 - `action` (for `type=action`) or `op` (for control/config/state) names the operation.
 - `params` is an object; `id` is a non-zero uint32 (0 is reserved for events, not yet
   implemented); `session`/`boot_id` are strings.
@@ -72,8 +72,8 @@ device-specific capabilities:
 | `action / device / restart` | Deferred reboot (real). |
 | `state / fan` | `mode`, `power`, `speed`, `manual_speed`, `rpm`, `power_available` (real; `rpm` is a theoretical estimate from the PWM duty until the tach is wired). |
 | `state / vibration` | Per-axis RMS from the ADXL345 (real). |
-| `state / environment` | Mock (fixed values). |
-| `state / inputs` | Button press states (real, debounced). |
+| `state / environment` | Real (SHT31 ambient + humidity; DS18B20 mirror still mocked). |
+| `state / buttons` | Button press states (real, debounced). |
 | `state / operation` | Last operation's status. |
 | `config / <group> / get` | Read-only mock; `set` → `NOT_SUPPORTED`. |
 | `control / fan / mode` | `params.value` (`off`/`auto`/`manual`). |

@@ -16,7 +16,7 @@
  * ========================================================================= */
 
 /* Board status LED — direct GPIO, LEDC PWM (active-high: anode via 100 Ω). */
-#define BOARD_LED_GPIO          GPIO_NUM_36
+#define BOARD_LED_GPIO          GPIO_NUM_35
 
 /* Focuser status LED — reflects the TMC/focuser state. */
 #define FOCUSER_LED_GPIO        GPIO_NUM_37
@@ -27,6 +27,9 @@
 
 /* ADXL345 I2C address (SDO tied to GND). */
 #define ADXL345_ADDR    0x53
+
+/* SHT31-D I2C address (ADDR pin tied to GND). Use 0x45 when ADDR is tied high. */
+#define SHT31_ADDR      0x44
 
 /* I2C bus — shared by the ADXL345 (vibration) and the SHT31 (environment). */
 #define I2C_SDA_GPIO    GPIO_NUM_5
@@ -46,7 +49,7 @@
  * the relay switches the fan's 12 V supply. */
 #define FAN_PWM_GPIO           GPIO_NUM_14
 #define FAN_RELAY_GPIO         GPIO_NUM_13
-#define FAN_LED_GPIO           GPIO_NUM_35
+#define FAN_LED_GPIO           GPIO_NUM_36
 #define FAN_RELAY_ACTIVE_LEVEL 1
 #define FAN_SPEED_MAX         100    /* user speed at full duty (2200 RPM) */
 #define FAN_SPEED_MIN         1      /* user speed at FAN_MIN_PWM_PCT (≈450 RPM) */

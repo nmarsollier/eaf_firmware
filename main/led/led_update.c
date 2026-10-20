@@ -12,11 +12,12 @@
 #include "board.h"
 #include "fan.h"
 #include "motors.h"
+#include "sht31.h"
 
 void led_update(void) {
-    /* Board LED: dim only when 12 V is present and the accelerometer (I2C)
-     * answers; otherwise beacon (error). */
-    if (board_has_external_power() && accelerometer_is_present()) {
+    /* Board LED: dim only when 12 V is present and both I2C sensors (ADXL345,
+     * SHT31) answer; otherwise beacon (error). */
+    if (board_has_external_power() && accelerometer_is_present() && sht31_is_present()) {
         led_set_state(LED_ID_BOARD, LED_STATE_DIM);
     } else {
         led_set_state(LED_ID_BOARD, LED_STATE_BEACON);

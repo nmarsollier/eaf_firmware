@@ -39,7 +39,10 @@ Desktop app (Go) (Alpaca/UI) → USB CDC-ACM → Proto → Focuser → TMC2209/G
 - **usb_cdc** (`main/usb_cdc/`) — USB CDC-ACM transport.
 - **proto** (`main/proto/`) — `proto=2` protocol (framing, dispatch, handlers).
 - **fan** (`main/fan/`) — Noctua PWM + relay + modes (off/auto/manual).
-- **environment / inputs** (`main/*/`) — mocks (fixed values).
+- **i2c_bus** (`main/i2c_bus/`) — shared I2C master bus (ADXL345 + SHT31).
+- **sht31** (`main/sht31/`) — SHT31-D over I2C (ambient temp + humidity).
+- **environment** (`main/environment/`) — ambient/humidity (SHT31) + dew point; mirror (DS18B20) mock.
+- **buttons** (`main/buttons/`) — local buttons (focuser enable + fan mode).
 - **runtime** (`main/runtime/`) — init and main loop.
 
 ## Current state
@@ -48,11 +51,11 @@ Implemented: `board` (12 V sense), `led` (board + focuser + fan LEDs), `tmc`
 (TMC2209 with re-init on 12 V return), `motors` (motion), `accelerometer`
 (ADXL345) + `vibration` (per-axis movement figures), `usb_cdc` (transport),
 `proto` (`proto=2` protocol with capabilities/state/action/config/control
-handlers), `fan` (Noctua PWM + relay, modes off/auto/manual) and `inputs`
-(local buttons: focuser enable/disable + fan mode cycle). Mock of
-`environment`.
+handlers), `fan` (Noctua PWM + relay, modes off/auto/manual) and `buttons`
+(local buttons: focuser enable/disable + fan mode cycle). Real `environment`
+(ambient temp/humidity from the SHT31; mirror DS18B20 still mocked).
 
-LED behaviour: the board LED flags a missing 12 V rail or an I2C/accelerometer
+LED behaviour: the board LED flags a missing 12 V rail or an I2C (ADXL345/SHT31)
 fault; the focuser LED flags a TMC driver fault (off when 12 V is missing or the
 focuser is disabled); the fan LED brightness follows the fan intensity. A
 power-loss error is shown only by the board LED.

@@ -1,6 +1,6 @@
 /* Runtime - runtime_loop.c
  *
- * Purpose: run the periodic board cycle for inputs.
+ * Purpose: run the periodic board cycle for the buttons and status LEDs.
  */
 #include "runtime.h"
 
@@ -8,8 +8,9 @@
 #include "freertos/task.h"
 
 #include "board.h"
+#include "buttons.h"
+#include "environment.h"
 #include "fan.h"
-#include "inputs.h"
 #include "led.h"
 #include "motors.h"
 #include "proto.h"
@@ -32,8 +33,9 @@ static void main_loop_task(void *arg) {
     while (true) {
         board_update();
         motors_update_power(board_has_external_power());
+        environment_update();
         fan_update();
-        inputs_update();
+        buttons_update();
         proto_poll();
         vibration_update();
         led_update();

@@ -1,6 +1,6 @@
 /* Proto — proto_state.c — STATE: coherent snapshots per target.
  *
- * Routed by `target`: device, focuser, fan, environment, vibration, inputs,
+ * Routed by `target`: device, focuser, fan, environment, vibration, buttons,
  * operation. Real targets (device/focuser) read board/motors/tmc; the rest
  * read the mock modules.
  */
@@ -10,9 +10,11 @@
 
 #include "esp_system.h"
 
+#include "accelerometer.h"
+#include "buttons.h"
 #include "environment.h"
 #include "fan.h"
-#include "inputs.h"
+#include "sht31.h"
 #include "vibration.h"
 
 static void get_session(const char *req, char *out, size_t cap) {
@@ -39,18 +41,20 @@ static void state_device(char *out, size_t cap, uint32_t id, const char *session
     MotorsState ms = motors_current_state();
     bool fault = motors_status_is_error(ms.status) || !tmc2209_is_initialized();
     bool power = board_has_external_power();
+    bool sensor_fault = !accelerometer_is_present() || !sht31_is_present();
 
     size_t len = 0;
     out[0] = '\0';
     proto_env_begin(out, cap, &len, "state", id, session, true);
     proto_buf_append(out, cap, &len,
         ",\"data\":{\"power_external_present\":%s,\"health\":\"%s\","
-        "\"focuser_busy\":%s,\"fan_mode\":\"%s\",\"sensor_health\":\"ok\","
+        "\"focuser_busy\":%s,\"fan_mode\":\"%s\",\"sensor_health\":\"%s\","
         "\"reset_reason\":\"%s\",\"faults\":[",
         power ? "true" : "false",
         fault ? "fault" : "ok",
         ms.status == MOTORS_STATUS_MOVING ? "true" : "false",
-        fan_mode_to_string(fan_get_mode()), reset_reason_str());
+        fan_mode_to_string(fan_get_mode()), sensor_fault ? "fault" : "ok",
+        reset_reason_str());
 
     if (fault) {
         proto_buf_append(out, cap, &len,
@@ -121,14 +125,25 @@ static void state_fan(char *out, size_t cap, uint32_t id, const char *session) {
 /* ── state / environment ───────────────────────────────────── */
 
 static void state_environment(char *out, size_t cap, uint32_t id, const char *session) {
-    float ambient = environment_get_ambient_c();
+    bool valid = environment_ambient_valid();
     float mirror = environment_get_mirror_c();
-    float humidity = environment_get_humidity_pct();
-    float dew = environment_get_dew_point_c();
 
     size_t len = 0;
     out[0] = '\0';
     proto_env_begin(out, cap, &len, "state", id, session, true);
+
+    if (!valid) {
+        proto_buf_append(out, cap, &len,
+            ",\"data\":{\"error\":\"SENSOR_ABSENT\",\"ambient_c\":null,"
+            "\"humidity_pct\":null,\"mirror_c\":%.2f,\"dew_point_c\":null,"
+            "\"mirror_ambient_delta_c\":null,\"mirror_dew_margin_c\":null}}",
+            mirror);
+        return;
+    }
+
+    float ambient = environment_get_ambient_c();
+    float humidity = environment_get_humidity_pct();
+    float dew = environment_get_dew_point_c();
     proto_buf_append(out, cap, &len,
         ",\"data\":{\"error\":null,\"ambient_c\":%.2f,\"humidity_pct\":%.2f,\"mirror_c\":%.2f,"
         "\"dew_point_c\":%.2f,\"mirror_ambient_delta_c\":%.2f,"
@@ -162,9 +177,9 @@ static void state_vibration(char *out, size_t cap, uint32_t id, const char *sess
     }
 }
 
-/* ── state / inputs ────────────────────────────────────────── */
+/* ── state / buttons ───────────────────────────────────────── */
 
-static void state_inputs(char *out, size_t cap, uint32_t id, const char *session) {
+static void state_buttons(char *out, size_t cap, uint32_t id, const char *session) {
     MotorsState ms = motors_current_state();
     const char *led = "ready";
     if (motors_status_is_error(ms.status)) {
@@ -179,8 +194,8 @@ static void state_inputs(char *out, size_t cap, uint32_t id, const char *session
     proto_buf_append(out, cap, &len,
         ",\"data\":{\"focuser_enable_pressed\":%s,\"fan_mode_pressed\":%s,"
         "\"local_focus_active\":false,\"led_state\":\"%s\",\"last_input_change_ms\":0}}",
-        inputs_focuser_enable_pressed() ? "true" : "false",
-        inputs_fan_mode_pressed() ? "true" : "false",
+        buttons_focuser_enable_pressed() ? "true" : "false",
+        buttons_fan_mode_pressed() ? "true" : "false",
         led);
 }
 
@@ -216,8 +231,8 @@ void proto_handle_state(const char *req, uint32_t id, char *out, size_t cap) {
         state_environment(out, cap, id, session);
     } else if (strcmp(target, "vibration") == 0) {
         state_vibration(out, cap, id, session);
-    } else if (strcmp(target, "inputs") == 0) {
-        state_inputs(out, cap, id, session);
+    } else if (strcmp(target, "buttons") == 0) {
+        state_buttons(out, cap, id, session);
     } else if (strcmp(target, "operation") == 0) {
         state_operation(out, cap, id, session);
     } else {

@@ -20,13 +20,15 @@ Electronic focuser for a Newtonian telescope with dedicated sensors.
 | `led` | All status LEDs (board + focuser + fan). | board `BOARD_LED_GPIO`, focuser `FOCUSER_LED_GPIO`, fan `FAN_LED_GPIO` |
 | `tmc` | TMC2209 over single-wire UART, init with verification and **re-init on 12 V return**. | EN `TMC_EN_GPIO`, TX `TMC_TX_GPIO` (1 kΩ), RX `TMC_RX_GPIO`, STEP `TMC_STEP_GPIO`, DIR `TMC_DIR_GPIO` |
 | `motors` | Focuser motion: STEP/DIR over RMT with trapezoidal ramp, `move_to`/`move_by`/`stop`, power gating. | — |
+| `i2c_bus` | Shared I2C master bus (ADXL345 + SHT31). | SDA `I2C_SDA_GPIO`, SCL `I2C_SCL_GPIO` |
 | `accelerometer` | ADXL345 over I2C (driver: init, probe, read). | SDA `I2C_SDA_GPIO`, SCL `I2C_SCL_GPIO` |
+| `sht31` | SHT31-D over I2C (driver: init, probe, read). | SDA `I2C_SDA_GPIO`, SCL `I2C_SCL_GPIO`, addr `SHT31_ADDR` |
 | `vibration` | Per-axis movement figures (demeaned RMS in m/s²) from the ADXL345. | — |
 | `usb_cdc` | USB CDC-ACM transport (TinyUSB). | — |
 | `proto` | `proto=2`, `role="accessories"`, `schema="eaf-accessories"`; handlers `capabilities`/`state`/`action`/`config`/`control`. | — |
 | `fan` | Noctua NF-A8 PWM (25 kHz) + relay; modes `off`/`auto`/`manual`. | PWM `FAN_PWM_GPIO`, relay `FAN_RELAY_GPIO` |
-| `inputs` | Two local push buttons (active-low, debounced). | focuser `BUTTON_FOCUSER_ENABLE_GPIO`, fan `BUTTON_FAN_MODE_GPIO` |
-| mocks | `environment` (fixed values). | — |
+| `buttons` | Two local push buttons (active-low, debounced). | focuser `BUTTON_FOCUSER_ENABLE_GPIO`, fan `BUTTON_FAN_MODE_GPIO` |
+| `environment` | Ambient temp/humidity from the SHT31 + dew point; mirror (DS18B20) still mocked. | — |
 
 The protocol contract is documented in [`main/proto/README.md`](main/proto/README.md).
 
@@ -39,7 +41,7 @@ Two local push buttons (push-to-GND, active-low):
 ### Pending
 
 - Real fan RPM readback (tach).
-- Real sensors: DS18B20, SHT31.
+- Real mirror temperature (DS18B20).
 - Events/subscription, extended session (op_id dedup by content), `config/set` with persistence.
 - Go gateway (Alpaca Focuser V4 / ObservingConditions V2 / Switch V3) — separate repo: <https://github.com/nmarsollier/mount_panel>.
 
@@ -74,7 +76,7 @@ Three LEDs: board (general state), focuser (driver state) and fan (speed). The
 circuit is the same for all three: LED cathode to GND, anode to a GPIO through a
 100 Ω resistor; brightness is dimmed via PWM duty.
 
-- Board LED — beacon (error) when 12 V is missing or the I2C bus (ADXL345) faults; dim otherwise.
+- Board LED — beacon (error) when 12 V is missing or an I2C sensor (ADXL345/SHT31) faults; dim otherwise.
 - Focuser LED — beacon on a TMC driver fault, bright while moving, dim when idle,
   off when 12 V is missing or the focuser is disabled. A missing 12 V rail is a
   board-level error, shown only by the board LED.

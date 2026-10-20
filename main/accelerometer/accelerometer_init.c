@@ -1,16 +1,18 @@
 /* Accelerometer — accelerometer_init.c
  *
- * Purpose: bring up the I2C bus and the ADXL345 sensor on it.
+ * Purpose: bring up the ADXL345 sensor on the shared I2C bus.
  *
- * Creates the bus on I2C_SDA_GPIO / I2C_SCL_GPIO, adds a device handle for
- * address 0x53, probes it and configures it if it answers. A missing sensor is
- * not fatal: the vibration module simply reports itself unavailable.
+ * Attaches a device handle for address 0x53 to the shared bus (i2c_bus),
+ * probes it and configures it if it answers. A missing sensor is not fatal:
+ * the vibration module simply reports itself unavailable.
  */
 #include "accelerometer_internal.h"
 
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+
+#include "i2c_bus.h"
 
 static const char *TAG = "ACCELEROMETER_INIT";
 
@@ -52,23 +54,11 @@ esp_err_t accelerometer_init(void) {
     accel_sensor.dev_handle = NULL;
     accel_sensor.present    = false;
 
-    i2c_master_bus_config_t bus_config = {
-        .i2c_port               = ACCEL_I2C_PORT,
-        .sda_io_num             = I2C_SDA_GPIO,
-        .scl_io_num             = I2C_SCL_GPIO,
-        .clk_source             = I2C_CLK_SRC_DEFAULT,
-        .glitch_ignore_cnt      = 7,
-        .flags.enable_internal_pullup = true,
-    };
-
-    /* Note: the bus handle is local for now. When the SHT31 (environment) is
-     * added, promote it to shared state so both sensors attach to this bus. */
-    i2c_master_bus_handle_t bus_handle = NULL;
-    esp_err_t err = i2c_new_master_bus(&bus_config, &bus_handle);
+    esp_err_t err = i2c_bus_init();
     if (err != ESP_OK) {
-        ESP_LOGE(TAG, "I2C bus init failed: %s — sensor disabled", esp_err_to_name(err));
         return err;
     }
+    i2c_master_bus_handle_t bus = i2c_bus_get();
 
     i2c_device_config_t dev_config = {
         .dev_addr_length = I2C_ADDR_BIT_LEN_7,
@@ -76,7 +66,7 @@ esp_err_t accelerometer_init(void) {
         .scl_speed_hz    = ACCEL_CLK_HZ,
     };
 
-    err = i2c_master_bus_add_device(bus_handle, &dev_config, &accel_sensor.dev_handle);
+    err = i2c_master_bus_add_device(bus, &dev_config, &accel_sensor.dev_handle);
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "addr 0x%02X: device handle failed: %s",
                  accel_sensor.address, esp_err_to_name(err));
@@ -89,7 +79,7 @@ esp_err_t accelerometer_init(void) {
         if (attempt > 0) {
             vTaskDelay(pdMS_TO_TICKS(200));
         }
-        err = i2c_master_probe(bus_handle, accel_sensor.address, ACCEL_TIMEOUT_MS);
+        err = i2c_master_probe(bus, accel_sensor.address, ACCEL_TIMEOUT_MS);
         if (err == ESP_OK) {
             break;
         }

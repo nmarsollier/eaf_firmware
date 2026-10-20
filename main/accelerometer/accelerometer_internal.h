@@ -8,9 +8,8 @@
 #include "config.h"
 #include "driver/i2c_master.h"
 
-/* ── I2C hardware configuration ───────────────────────────── */
+/* ── I2C configuration ────────────────────────────────────── */
 
-#define ACCEL_I2C_PORT    I2C_NUM_0
 #define ACCEL_CLK_HZ      100000     /* 100 kHz standard mode */
 #define ACCEL_TIMEOUT_MS  100
 

@@ -5,7 +5,7 @@
  *
  * The protocol is a length-prefixed JSON message stream carried over the
  * USB CDC-ACM transport (proto=2, role="accessories"). It exposes the focuser
- * and its accessories (fan, environment, vibration, inputs) so a desktop app
+ * and its accessories (fan, environment, vibration, buttons) so a desktop app
  * translates them into ASCOM Alpaca and a UI. See README.md in this folder for
  * the wire contract.
  *

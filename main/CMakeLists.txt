@@ -10,8 +10,13 @@ idf_component_register(
         "led/led_beacon.c"
         "led/led_update.c"
 
+        "i2c_bus/i2c_bus.c"
+
         "accelerometer/accelerometer_init.c"
         "accelerometer/accelerometer_read.c"
+
+        "sht31/sht31_init.c"
+        "sht31/sht31_read.c"
 
         "tmc/tmc_init.c"
         "tmc/tmc_get_initialized.c"
@@ -48,7 +53,7 @@ idf_component_register(
         "fan/fan.c"
         "environment/environment.c"
         "vibration/vibration.c"
-        "inputs/inputs.c"
+        "buttons/buttons.c"
 
         "runtime/runtime_setup.c"
         "runtime/runtime_loop.c"
@@ -56,7 +61,9 @@ idf_component_register(
         INCLUDE_DIRS
         "."
         "config"
+        "i2c_bus"
         "accelerometer"
+        "sht31"
         "board"
         "led"
         "tmc"
@@ -66,7 +73,7 @@ idf_component_register(
         "fan"
         "environment"
         "vibration"
-        "inputs"
+        "buttons"
         "runtime"
 
         REQUIRES
