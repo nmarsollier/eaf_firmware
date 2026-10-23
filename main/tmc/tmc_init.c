@@ -99,7 +99,7 @@ typedef struct {
 
 static const TmcAxis tmc_axes[] = {
     /* irun/ihold are provisional (test motor) — tune for the NEMA 11. */
-    { .name = "FOCUSER", .uart_num = TMC_UART_NUM, .tx_gpio = TMC_TX_GPIO, .rx_gpio = TMC_RX_GPIO, .irun = 8, .ihold = 6 },
+    { .name = "FOCUSER", .uart_num = TMC_UART_NUM, .tx_gpio = TMC_TX_GPIO, .rx_gpio = TMC_RX_GPIO, .irun = 12, .ihold = 6 },
 };
 
 /* ── UART helpers ──────────────────────────────────────────── */
