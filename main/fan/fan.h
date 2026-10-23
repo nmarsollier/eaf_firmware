@@ -33,8 +33,7 @@ uint8_t fan_get_manual_speed(void);
 /* Effective speed 0..100 (0 when off, computed in AUTO, manual in MANUAL). */
 uint8_t fan_get_effective_speed(void);
 
-/* PWM intensity 0..100 (0 when off, ~20..100 when running) — feeds the RPM
- * estimate. */
+/* PWM intensity 0..100 (0 when off, ~20..100 when running) — drives the LED. */
 uint8_t fan_get_intensity_pct(void);
 
 /* Relay state: on in every mode except OFF. */

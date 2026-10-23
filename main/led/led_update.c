@@ -37,11 +37,11 @@ void led_update(void) {
         led_set_state(LED_ID_FOCUSER, LED_STATE_DIM);
     }
 
-    /* Fan LED: dim while the fan is running, but only when 12 V is present
+    /* Fan LED: brightness follows fan intensity, but only when 12 V is present
      * (the fan cannot run without it). */
     uint32_t fan_duty = 0;
     if (board_has_external_power() && fan_get_power()) {
-        fan_duty = LED_DIM_DUTY;
+        fan_duty = (uint32_t)fan_get_intensity_pct() * LED_BRIGHT_DUTY / 100;
     }
     led_set_duty(LED_ID_FAN, fan_duty);
 }
