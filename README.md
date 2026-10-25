@@ -23,12 +23,13 @@ Electronic focuser for a Newtonian telescope with dedicated sensors.
 | `i2c_bus` | Shared I2C master bus (ADXL345 + SHT31). | SDA `I2C_SDA_GPIO`, SCL `I2C_SCL_GPIO` |
 | `accelerometer` | ADXL345 over I2C (driver: init, probe, read). | SDA `I2C_SDA_GPIO`, SCL `I2C_SCL_GPIO` |
 | `sht31` | SHT31-D over I2C (driver: init, probe, read). | SDA `I2C_SDA_GPIO`, SCL `I2C_SCL_GPIO`, addr `SHT31_ADDR` |
+| `ds18b20` | DS18B20 mirror temperature over 1-wire (driver: init, probe, non-blocking read). | `DS18B20_GPIO` |
 | `vibration` | Per-axis movement figures (demeaned RMS in m/s²) from the ADXL345. | — |
 | `usb_cdc` | USB CDC-ACM transport (TinyUSB). | — |
 | `proto` | `proto=2`, `role="accessories"`, `schema="eaf-accessories"`; handlers `capabilities`/`state`/`action`/`config`/`control`. | — |
 | `fan` | Noctua NF-A8 PWM (25 kHz) + relay; modes `off`/`auto`/`manual`. | PWM `FAN_PWM_GPIO`, relay `FAN_RELAY_GPIO` |
 | `buttons` | Two local push buttons (active-low, debounced). | focuser `BUTTON_FOCUSER_ENABLE_GPIO`, fan `BUTTON_FAN_MODE_GPIO` |
-| `environment` | Ambient temp/humidity from the SHT31 + dew point; mirror (DS18B20) still mocked. | — |
+| `environment` | Ambient temp/humidity from the SHT31 + dew point; mirror from the DS18B20. | — |
 
 The protocol contract is documented in [`main/proto/README.md`](main/proto/README.md).
 
@@ -41,7 +42,6 @@ Two local push buttons (push-to-GND, active-low):
 ### Pending
 
 - Real fan RPM readback (tach).
-- Real mirror temperature (DS18B20).
 - Events/subscription, extended session (op_id dedup by content), `config/set` with persistence.
 - Go gateway (Alpaca Focuser V4 / ObservingConditions V2 / Switch V3) — separate repo: <https://github.com/nmarsollier/mount_panel>.
 
@@ -117,7 +117,9 @@ manual → off); the mode is also settable from the protocol.
 ## Mirror temperature sensor — DS18B20
 
 - Placed on the back face of the primary mirror to measure the glass temperature.
-- Read over 1-wire on a dedicated GPIO.
+- Read over 1-wire on GPIO 6 (RMT-backed; internal pull-up enabled, a 4.7 kΩ
+  pull-up to 3.3 V is recommended). The read is non-blocking: a 12-bit
+  conversion (~750 ms) runs between runtime-loop ticks.
 
 ## Ambient temperature and humidity — SHT31
 

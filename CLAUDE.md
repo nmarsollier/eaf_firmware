@@ -41,7 +41,8 @@ Desktop app (Go) (Alpaca/UI) → USB CDC-ACM → Proto → Focuser → TMC2209/G
 - **fan** (`main/fan/`) — Noctua PWM + relay + modes (off/auto/manual).
 - **i2c_bus** (`main/i2c_bus/`) — shared I2C master bus (ADXL345 + SHT31).
 - **sht31** (`main/sht31/`) — SHT31-D over I2C (ambient temp + humidity).
-- **environment** (`main/environment/`) — ambient/humidity (SHT31) + dew point; mirror (DS18B20) mock.
+- **ds18b20** (`main/ds18b20/`) — DS18B20 mirror temperature (1-wire, non-blocking read).
+- **environment** (`main/environment/`) — ambient/humidity (SHT31) + dew point; mirror (DS18B20).
 - **buttons** (`main/buttons/`) — local buttons (focuser enable + fan mode).
 - **runtime** (`main/runtime/`) — init and main loop.
 
@@ -51,9 +52,10 @@ Implemented: `board` (12 V sense), `led` (board + focuser + fan LEDs), `tmc`
 (TMC2209 with re-init on 12 V return), `motors` (motion), `accelerometer`
 (ADXL345) + `vibration` (per-axis movement figures), `usb_cdc` (transport),
 `proto` (`proto=2` protocol with capabilities/state/action/config/control
-handlers), `fan` (Noctua PWM + relay, modes off/auto/manual) and `buttons`
+handlers), `fan` (Noctua PWM + relay, modes off/auto/manual), `ds18b20`
+(DS18B20 mirror temperature, non-blocking 1-wire read) and `buttons`
 (local buttons: focuser enable/disable + fan mode cycle). Real `environment`
-(ambient temp/humidity from the SHT31; mirror DS18B20 still mocked).
+(ambient temp/humidity from the SHT31; mirror temp from the DS18B20).
 
 LED behaviour: the board LED flags a missing 12 V rail or an I2C (ADXL345/SHT31)
 fault; the focuser LED flags a TMC driver fault (off when 12 V is missing or the
@@ -63,9 +65,8 @@ power-loss error is shown only by the board LED.
 Two physical buttons are wired (push-to-GND on GPIO 1 and 2): focuser
 enable/disable toggle and fan mode cycle (off/auto/manual).
 
-Pending: real sensors
-(DS18B20/SHT31), events/extended session, `config/set` with persistence, and
-the Go gateway. Contract in `main/proto/README.md`.
+Pending: events/extended session, `config/set` with persistence, and the Go
+gateway. Contract in `main/proto/README.md`.
 
 ## General rules
 

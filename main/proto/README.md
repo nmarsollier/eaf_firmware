@@ -72,7 +72,7 @@ device-specific capabilities:
 | `action / device / restart` | Deferred reboot (real). |
 | `state / fan` | `mode`, `power`, `speed`, `manual_speed`, `rpm`, `power_available` (real; `rpm` is a theoretical estimate from the PWM duty until the tach is wired). |
 | `state / vibration` | Per-axis RMS from the ADXL345 (real). |
-| `state / environment` | Real (SHT31 ambient + humidity; DS18B20 mirror still mocked). |
+| `state / environment` | Real (SHT31 ambient + humidity; DS18B20 mirror temperature). |
 | `state / buttons` | Button press states (real, debounced). |
 | `state / operation` | Last operation's status. |
 | `config / <group> / get` | Read-only mock; `set` → `NOT_SUPPORTED`. |
@@ -108,4 +108,4 @@ one faulty sensor only degrades its own `state` target.
 Events/subscription and push; real lease/heartbeat; op_id dedup by content
 (`OUTCOME_UNKNOWN`/`ID_CONFLICT`); `jog`, `guard`, `identify`, `clear_fault`,
 `driver_status`, `environment/refresh`, `vibration/enable|baseline|capture`;
-`config/set` with persistence; fan RPM (tach), real RPM readback and real sensors.
+`config/set` with persistence; fan RPM (tach), real RPM readback.

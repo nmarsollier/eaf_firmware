@@ -125,14 +125,28 @@ static void state_fan(char *out, size_t cap, uint32_t id, const char *session) {
 /* ── state / environment ───────────────────────────────────── */
 
 static void state_environment(char *out, size_t cap, uint32_t id, const char *session) {
-    bool valid = environment_ambient_valid();
-    float mirror = environment_get_mirror_c();
+    bool ambient_valid = environment_ambient_valid();
+    bool mirror_valid = environment_mirror_valid();
 
     size_t len = 0;
     out[0] = '\0';
     proto_env_begin(out, cap, &len, "state", id, session, true);
 
-    if (!valid) {
+    if (!ambient_valid && !mirror_valid) {
+        proto_buf_append(out, cap, &len,
+            ",\"data\":{\"error\":\"SENSOR_ABSENT\",\"ambient_c\":null,"
+            "\"humidity_pct\":null,\"mirror_c\":null,\"dew_point_c\":null,"
+            "\"mirror_ambient_delta_c\":null,\"mirror_dew_margin_c\":null}}");
+        return;
+    }
+
+    float ambient = environment_get_ambient_c();
+    float humidity = environment_get_humidity_pct();
+    float dew = environment_get_dew_point_c();
+    float mirror = environment_get_mirror_c();
+
+    if (!ambient_valid) {
+        /* Mirror only — ambient/humidity/dew absent. */
         proto_buf_append(out, cap, &len,
             ",\"data\":{\"error\":\"SENSOR_ABSENT\",\"ambient_c\":null,"
             "\"humidity_pct\":null,\"mirror_c\":%.2f,\"dew_point_c\":null,"
@@ -141,9 +155,16 @@ static void state_environment(char *out, size_t cap, uint32_t id, const char *se
         return;
     }
 
-    float ambient = environment_get_ambient_c();
-    float humidity = environment_get_humidity_pct();
-    float dew = environment_get_dew_point_c();
+    if (!mirror_valid) {
+        /* Ambient only — the mirror is still converting or absent. */
+        proto_buf_append(out, cap, &len,
+            ",\"data\":{\"error\":\"SENSOR_ABSENT\",\"ambient_c\":%.2f,"
+            "\"humidity_pct\":%.2f,\"mirror_c\":null,\"dew_point_c\":%.2f,"
+            "\"mirror_ambient_delta_c\":null,\"mirror_dew_margin_c\":null}}",
+            ambient, humidity, dew);
+        return;
+    }
+
     proto_buf_append(out, cap, &len,
         ",\"data\":{\"error\":null,\"ambient_c\":%.2f,\"humidity_pct\":%.2f,\"mirror_c\":%.2f,"
         "\"dew_point_c\":%.2f,\"mirror_ambient_delta_c\":%.2f,"

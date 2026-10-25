@@ -35,6 +35,9 @@
 #define I2C_SDA_GPIO    GPIO_NUM_5
 #define I2C_SCL_GPIO    GPIO_NUM_4
 
+/* Primary-mirror temperature sensor (DS18B20) — 1-wire on a dedicated GPIO. */
+#define DS18B20_GPIO    GPIO_NUM_6
+
 /* TMC2209 driver — single focuser axis, single-wire UART. */
 #define TMC_UART_NUM    UART_NUM_1
 #define TMC_EN_GPIO     GPIO_NUM_9     /* EN — LOW = enabled */

@@ -18,6 +18,9 @@ idf_component_register(
         "sht31/sht31_init.c"
         "sht31/sht31_read.c"
 
+        "ds18b20/ds18b20_init.c"
+        "ds18b20/ds18b20_read.c"
+
         "tmc/tmc_init.c"
         "tmc/tmc_get_initialized.c"
         "tmc/tmc_status.c"
@@ -64,6 +67,7 @@ idf_component_register(
         "i2c_bus"
         "accelerometer"
         "sht31"
+        "ds18b20"
         "board"
         "led"
         "tmc"
