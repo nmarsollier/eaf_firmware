@@ -5,19 +5,17 @@ Keep this file in a simple format so it can be read and edited quickly.
 ## Reference projects
 
 - **`~/Dev/bft_firmware`** — ESP32-S3 fork equatorial mount firmware (the mount
-  this focuser pairs with). Reference for the LED/motor logic, 12 V detection
-  and the USB CDC-ACM serial protocol.
-- **`~/Dev/mount_panel`** — Go gateway (Alpaca/UI). Will expose the Alpaca Focuser
-  for this project. Out of scope for now.
+  this focuser pairs with). Reference for the motor logic, 12 V detection and the
+  USB CDC-ACM serial protocol.
+- **`~/Dev/mount_panel`** — Go gateway (Alpaca/UI). Exposes the Alpaca Focuser for
+  this project.
 
 ## Project definition
 
 - Electronic focuser (EAF) for a Newtonian telescope, on ESP32-S3.
-- Functions: EAF (NEMA 11 motor + TMC2209 driver), primary-mirror fan control
-  (Noctua NF-A8 PWM 12 V with relay), mirror temperature (DS18B20, 1-wire),
-  ambient temperature/humidity (SHT31, I2C), vibration (ADXL345, I2C).
-- 12 V supply (TMC2209, ESP and fan); the ESP is also powered over USB.
-- 3 status LEDs (board, focuser, fan).
+- Functions: EAF (NEMA 11 motor + TMC2209 driver), external 12 V detection and two
+  status LEDs (board + focuser).
+- 12 V supply (TMC2209 and ESP); the ESP is also powered over USB.
 - USB CDC-ACM communication with JSON messages.
 - Hardware detail in `README.md`.
 
@@ -31,42 +29,29 @@ Desktop app (Go) (Alpaca/UI) → USB CDC-ACM → Proto → Focuser → TMC2209/G
 
 - **config** (`main/config/`) — single source of truth for pins and build constants.
 - **board** (`main/board/`) — 12 V power sense.
-- **led** (`main/led/`) — every status LED (board, focuser, fan).
+- **led** (`main/led/`) — the board and focuser status LEDs.
 - **tmc** (`main/tmc/`) — TMC2209 (single-wire UART + EN), re-init on 12 V return.
 - **motors** (`main/motors/`) — focuser motion (STEP/DIR, RMT, ramp).
-- **accelerometer** (`main/accelerometer/`) — ADXL345 over I2C.
-- **vibration** (`main/vibration/`) — per-axis movement figures from the ADXL345.
 - **usb_cdc** (`main/usb_cdc/`) — USB CDC-ACM transport.
 - **proto** (`main/proto/`) — `proto=2` protocol (framing, dispatch, handlers).
-- **fan** (`main/fan/`) — Noctua PWM + relay + modes (off/auto/manual).
-- **i2c_bus** (`main/i2c_bus/`) — shared I2C master bus (ADXL345 + SHT31).
-- **sht31** (`main/sht31/`) — SHT31-D over I2C (ambient temp + humidity).
-- **ds18b20** (`main/ds18b20/`) — DS18B20 mirror temperature (1-wire, non-blocking read).
-- **environment** (`main/environment/`) — ambient/humidity (SHT31) + dew point; mirror (DS18B20).
-- **buttons** (`main/buttons/`) — local buttons (focuser enable + fan mode).
+- **buttons** (`main/buttons/`) — local button (focuser enable/disable).
 - **runtime** (`main/runtime/`) — init and main loop.
 
 ## Current state
 
-Implemented: `board` (12 V sense), `led` (board + focuser + fan LEDs), `tmc`
-(TMC2209 with re-init on 12 V return), `motors` (motion), `accelerometer`
-(ADXL345) + `vibration` (per-axis movement figures), `usb_cdc` (transport),
-`proto` (`proto=2` protocol with capabilities/state/action/config/control
-handlers), `fan` (Noctua PWM + relay, modes off/auto/manual), `ds18b20`
-(DS18B20 mirror temperature, non-blocking 1-wire read) and `buttons`
-(local buttons: focuser enable/disable + fan mode cycle). Real `environment`
-(ambient temp/humidity from the SHT31; mirror temp from the DS18B20).
+Implemented: `board` (12 V sense), `led` (board + focuser LEDs), `tmc` (TMC2209 with
+re-init on 12 V return), `motors` (motion), `usb_cdc` (transport), `proto` (`proto=2`
+protocol, `device_id="eaf"`, with capabilities/state/action/config/control handlers)
+and `buttons` (local focuser enable/disable toggle).
 
-LED behaviour: the board LED flags a missing 12 V rail or an I2C (ADXL345/SHT31)
-fault; the focuser LED flags a TMC driver fault (off when 12 V is missing or the
-focuser is disabled); the fan LED brightness follows the fan intensity. A
-power-loss error is shown only by the board LED.
+LED behaviour: the board LED flags a missing 12 V rail; the focuser LED flags a TMC
+driver fault (off when 12 V is missing or the focuser is disabled). A power-loss error
+is shown only by the board LED.
 
-Two physical buttons are wired (push-to-GND on GPIO 1 and 2): focuser
-enable/disable toggle and fan mode cycle (off/auto/manual).
+One physical button is wired (push-to-GND on GPIO 1): focuser enable/disable toggle.
 
-Pending: events/extended session, `config/set` with persistence, and the Go
-gateway. Contract in `main/proto/README.md`.
+Pending: events/extended session, `config/set` with persistence, and the Go gateway.
+Contract in `main/proto/README.md`.
 
 ## General rules
 

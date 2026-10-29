@@ -9,12 +9,9 @@
 
 #include "board.h"
 #include "buttons.h"
-#include "environment.h"
-#include "fan.h"
 #include "led.h"
 #include "motors.h"
 #include "proto.h"
-#include "vibration.h"
 
 #define MAIN_LOOP_PERIOD_MS     200
 #define MAIN_TASK_STACK_SIZE    4096
@@ -33,11 +30,8 @@ static void main_loop_task(void *arg) {
     while (true) {
         board_update();
         motors_update_power(board_has_external_power());
-        environment_update();
-        fan_update();
         buttons_update();
         proto_poll();
-        vibration_update();
         led_update();
         vTaskDelay(period);
     }

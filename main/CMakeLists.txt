@@ -10,17 +10,6 @@ idf_component_register(
         "led/led_beacon.c"
         "led/led_update.c"
 
-        "i2c_bus/i2c_bus.c"
-
-        "accelerometer/accelerometer_init.c"
-        "accelerometer/accelerometer_read.c"
-
-        "sht31/sht31_init.c"
-        "sht31/sht31_read.c"
-
-        "ds18b20/ds18b20_init.c"
-        "ds18b20/ds18b20_read.c"
-
         "tmc/tmc_init.c"
         "tmc/tmc_get_initialized.c"
         "tmc/tmc_status.c"
@@ -53,9 +42,6 @@ idf_component_register(
         "proto/proto_config.c"
         "proto/proto_control.c"
 
-        "fan/fan.c"
-        "environment/environment.c"
-        "vibration/vibration.c"
         "buttons/buttons.c"
 
         "runtime/runtime_setup.c"
@@ -64,19 +50,12 @@ idf_component_register(
         INCLUDE_DIRS
         "."
         "config"
-        "i2c_bus"
-        "accelerometer"
-        "sht31"
-        "ds18b20"
         "board"
         "led"
         "tmc"
         "motors"
         "usb_cdc"
         "proto"
-        "fan"
-        "environment"
-        "vibration"
         "buttons"
         "runtime"
 
@@ -88,5 +67,4 @@ idf_component_register(
         esp_adc
         esp_driver_uart
         esp_driver_rmt
-        esp_driver_i2c
 )

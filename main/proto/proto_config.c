@@ -22,8 +22,7 @@ void proto_handle_config(const char *req, uint32_t id, char *out, size_t cap) {
         proto_env_begin(out, cap, &len, "config", id, session, true);
         proto_buf_append(out, cap, &len,
             ",\"data\":{\"config_rev\":%lu,\"saved_rev\":%lu,"
-            "\"config\":{\"microsteps\":%d,\"interpolation\":256,"
-            "\"pwm_freq_hz\":25000}}}",
+            "\"config\":{\"microsteps\":%d,\"interpolation\":256}}}",
             (unsigned long) proto_config_rev(),
             (unsigned long) proto_config_rev(),
             MICROSTEPS);

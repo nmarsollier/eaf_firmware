@@ -8,16 +8,12 @@
  */
 #include "led_internal.h"
 
-#include "accelerometer.h"
 #include "board.h"
-#include "fan.h"
 #include "motors.h"
-#include "sht31.h"
 
 void led_update(void) {
-    /* Board LED: dim only when 12 V is present and both I2C sensors (ADXL345,
-     * SHT31) answer; otherwise beacon (error). */
-    if (board_has_external_power() && accelerometer_is_present() && sht31_is_present()) {
+    /* Board LED: dim when 12 V is present, beacon (error) when it is missing. */
+    if (board_has_external_power()) {
         led_set_state(LED_ID_BOARD, LED_STATE_DIM);
     } else {
         led_set_state(LED_ID_BOARD, LED_STATE_BEACON);
@@ -36,12 +32,4 @@ void led_update(void) {
     } else {
         led_set_state(LED_ID_FOCUSER, LED_STATE_DIM);
     }
-
-    /* Fan LED: brightness follows fan intensity, but only when 12 V is present
-     * (the fan cannot run without it). */
-    uint32_t fan_duty = 0;
-    if (board_has_external_power() && fan_get_power()) {
-        fan_duty = (uint32_t)fan_get_intensity_pct() * LED_BRIGHT_DUTY / 100;
-    }
-    led_set_duty(LED_ID_FAN, fan_duty);
 }

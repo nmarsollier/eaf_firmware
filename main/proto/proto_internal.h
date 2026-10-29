@@ -13,7 +13,7 @@
 /* ── Protocol identity ────────────────────────────────────── */
 
 #define PROTO_VERSION       2
-#define PROTO_SCHEMA        "eaf-accessories"
+#define PROTO_SCHEMA        "eaf"
 #define PROTO_ROLE          "accessories"
 
 #define PROTO_MAX_FRAME     2048

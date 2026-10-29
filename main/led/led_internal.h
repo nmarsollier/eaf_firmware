@@ -28,7 +28,6 @@
 typedef enum {
     LED_ID_BOARD = 0,
     LED_ID_FOCUSER,
-    LED_ID_FAN,
     LED_COUNT
 } LedId;
 
@@ -54,7 +53,3 @@ extern LedState  led_states[LED_COUNT];
 void led_set_state(LedId id, LedState state);
 void led_beacon_start(LedId id);
 void led_beacon_stop(LedId id);
-
-/* Set a LED to a raw duty (0..LED_BRIGHT_DUTY) immediately, bypassing the
- * state machine. Used for the fan LED, whose brightness tracks fan speed. */
-void led_set_duty(LedId id, uint32_t duty);

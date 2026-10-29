@@ -1,8 +1,8 @@
 /* Proto — proto_state.c — STATE: coherent snapshots per target.
  *
- * Routed by `target`: device, focuser, fan, environment, vibration, buttons,
- * operation. Real targets (device/focuser) read board/motors/tmc; the rest
- * read the mock modules.
+ * Routed by `target`: device, focuser, buttons, operation. device/focuser read
+ * board/motors/tmc; buttons/operation read the focuser's local inputs and the
+ * last operation status.
  */
 #include "proto_internal.h"
 
@@ -10,12 +10,7 @@
 
 #include "esp_system.h"
 
-#include "accelerometer.h"
 #include "buttons.h"
-#include "environment.h"
-#include "fan.h"
-#include "sht31.h"
-#include "vibration.h"
 
 static void get_session(const char *req, char *out, size_t cap) {
     proto_json_get_string(req, "session", out, cap);
@@ -41,19 +36,16 @@ static void state_device(char *out, size_t cap, uint32_t id, const char *session
     MotorsState ms = motors_current_state();
     bool fault = motors_status_is_error(ms.status) || !tmc2209_is_initialized();
     bool power = board_has_external_power();
-    bool sensor_fault = !accelerometer_is_present() || !sht31_is_present();
 
     size_t len = 0;
     out[0] = '\0';
     proto_env_begin(out, cap, &len, "state", id, session, true);
     proto_buf_append(out, cap, &len,
         ",\"data\":{\"power_external_present\":%s,\"health\":\"%s\","
-        "\"focuser_busy\":%s,\"fan_mode\":\"%s\",\"sensor_health\":\"%s\","
-        "\"reset_reason\":\"%s\",\"faults\":[",
+        "\"focuser_busy\":%s,\"reset_reason\":\"%s\",\"faults\":[",
         power ? "true" : "false",
         fault ? "fault" : "ok",
         ms.status == MOTORS_STATUS_MOVING ? "true" : "false",
-        fan_mode_to_string(fan_get_mode()), sensor_fault ? "fault" : "ok",
         reset_reason_str());
 
     if (fault) {
@@ -98,106 +90,6 @@ static void state_focuser(char *out, size_t cap, uint32_t id, const char *sessio
         fault ? "\"DRIVER_FAULT\"" : "null");
 }
 
-/* ── state / fan ───────────────────────────────────────────── */
-
-static void state_fan(char *out, size_t cap, uint32_t id, const char *session) {
-    const char *mode = fan_mode_to_string(fan_get_mode());
-    bool power = fan_get_power();
-    int speed = fan_get_effective_speed();
-    int manual = fan_get_manual_speed();
-    int rpm = fan_get_rpm();
-
-    size_t len = 0;
-    out[0] = '\0';
-    proto_env_begin(out, cap, &len, "state", id, session, true);
-    proto_buf_append(out, cap, &len,
-        ",\"data\":{\"error\":null,\"mode\":\"%s\",\"power\":%s,\"speed\":%d,"
-        "\"manual_speed\":%d,\"power_available\":%s,\"rpm\":",
-        mode, power ? "true" : "false", speed, manual,
-        board_has_external_power() ? "true" : "false");
-    if (rpm >= 0) {
-        proto_buf_append(out, cap, &len, "%d}}", rpm);
-    } else {
-        proto_buf_append(out, cap, &len, "null}}");
-    }
-}
-
-/* ── state / environment ───────────────────────────────────── */
-
-static void state_environment(char *out, size_t cap, uint32_t id, const char *session) {
-    bool ambient_valid = environment_ambient_valid();
-    bool mirror_valid = environment_mirror_valid();
-
-    size_t len = 0;
-    out[0] = '\0';
-    proto_env_begin(out, cap, &len, "state", id, session, true);
-
-    if (!ambient_valid && !mirror_valid) {
-        proto_buf_append(out, cap, &len,
-            ",\"data\":{\"error\":\"SENSOR_ABSENT\",\"ambient_c\":null,"
-            "\"humidity_pct\":null,\"mirror_c\":null,\"dew_point_c\":null,"
-            "\"mirror_ambient_delta_c\":null,\"mirror_dew_margin_c\":null}}");
-        return;
-    }
-
-    float ambient = environment_get_ambient_c();
-    float humidity = environment_get_humidity_pct();
-    float dew = environment_get_dew_point_c();
-    float mirror = environment_get_mirror_c();
-
-    if (!ambient_valid) {
-        /* Mirror only — ambient/humidity/dew absent. */
-        proto_buf_append(out, cap, &len,
-            ",\"data\":{\"error\":\"SENSOR_ABSENT\",\"ambient_c\":null,"
-            "\"humidity_pct\":null,\"mirror_c\":%.2f,\"dew_point_c\":null,"
-            "\"mirror_ambient_delta_c\":null,\"mirror_dew_margin_c\":null}}",
-            mirror);
-        return;
-    }
-
-    if (!mirror_valid) {
-        /* Ambient only — the mirror is still converting or absent. */
-        proto_buf_append(out, cap, &len,
-            ",\"data\":{\"error\":\"SENSOR_ABSENT\",\"ambient_c\":%.2f,"
-            "\"humidity_pct\":%.2f,\"mirror_c\":null,\"dew_point_c\":%.2f,"
-            "\"mirror_ambient_delta_c\":null,\"mirror_dew_margin_c\":null}}",
-            ambient, humidity, dew);
-        return;
-    }
-
-    proto_buf_append(out, cap, &len,
-        ",\"data\":{\"error\":null,\"ambient_c\":%.2f,\"humidity_pct\":%.2f,\"mirror_c\":%.2f,"
-        "\"dew_point_c\":%.2f,\"mirror_ambient_delta_c\":%.2f,"
-        "\"mirror_dew_margin_c\":%.2f}}",
-        ambient, humidity, mirror, dew, mirror - ambient, mirror - dew);
-}
-
-/* ── state / vibration ─────────────────────────────────────── */
-
-static void state_vibration(char *out, size_t cap, uint32_t id, const char *session) {
-    bool enabled = vibration_get_enabled();
-    bool valid = vibration_get_valid();
-
-    size_t len = 0;
-    out[0] = '\0';
-    proto_env_begin(out, cap, &len, "state", id, session, true);
-
-    if (!enabled) {
-        proto_buf_append(out, cap, &len,
-            ",\"data\":{\"enabled\":false,\"valid\":false,\"error\":\"SENSOR_ABSENT\","
-            "\"rms_x\":null,\"rms_y\":null,\"rms_z\":null,\"rms_total\":null}}");
-    } else {
-        proto_buf_append(out, cap, &len,
-            ",\"data\":{\"enabled\":true,\"valid\":%s,\"error\":null,"
-            "\"sample_rate_hz\":5,"
-            "\"rms_x\":%.3f,\"rms_y\":%.3f,\"rms_z\":%.3f,\"rms_total\":%.3f,"
-            "\"processing\":\"per_second\"}}",
-            valid ? "true" : "false",
-            vibration_get_rms_x(), vibration_get_rms_y(), vibration_get_rms_z(),
-            vibration_get_rms_total());
-    }
-}
-
 /* ── state / buttons ───────────────────────────────────────── */
 
 static void state_buttons(char *out, size_t cap, uint32_t id, const char *session) {
@@ -213,10 +105,9 @@ static void state_buttons(char *out, size_t cap, uint32_t id, const char *sessio
     out[0] = '\0';
     proto_env_begin(out, cap, &len, "state", id, session, true);
     proto_buf_append(out, cap, &len,
-        ",\"data\":{\"focuser_enable_pressed\":%s,\"fan_mode_pressed\":%s,"
+        ",\"data\":{\"focuser_enable_pressed\":%s,"
         "\"local_focus_active\":false,\"led_state\":\"%s\",\"last_input_change_ms\":0}}",
         buttons_focuser_enable_pressed() ? "true" : "false",
-        buttons_fan_mode_pressed() ? "true" : "false",
         led);
 }
 
@@ -246,12 +137,6 @@ void proto_handle_state(const char *req, uint32_t id, char *out, size_t cap) {
         state_device(out, cap, id, session);
     } else if (strcmp(target, "focuser") == 0) {
         state_focuser(out, cap, id, session);
-    } else if (strcmp(target, "fan") == 0) {
-        state_fan(out, cap, id, session);
-    } else if (strcmp(target, "environment") == 0) {
-        state_environment(out, cap, id, session);
-    } else if (strcmp(target, "vibration") == 0) {
-        state_vibration(out, cap, id, session);
     } else if (strcmp(target, "buttons") == 0) {
         state_buttons(out, cap, id, session);
     } else if (strcmp(target, "operation") == 0) {

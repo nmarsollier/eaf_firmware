@@ -2,7 +2,7 @@
 
 Serial contract between the PC (Go gateway) and the focuser's ESP32-S3. It uses the
 unified transport and identifies itself through the `capabilities` handshake
-(`device_type="accessories"`, `proto=2`).
+(`device_type="accessories"`, `device_id="eaf"`, `proto=2`).
 
 ## Transport and framing
 
@@ -31,7 +31,7 @@ Response (`ok:true` + `data`, or `ok:false` + `error`):
 ```
 
 - `type`: `capabilities` | `state` | `config` | `control` | `action`.
-- `target`: `device` | `focuser` | `fan` | `environment` | `vibration` | `buttons` | `operation`.
+- `target`: `device` | `focuser` | `buttons` | `operation`.
 - `action` (for `type=action`) or `op` (for control/config/state) names the operation.
 - `params` is an object; `id` is a non-zero uint32 (0 is reserved for events, not yet
   implemented); `session`/`boot_id` are strings.
@@ -41,9 +41,6 @@ instead of the session/data envelope.
 
 ## Unified capabilities
 
-A shared header identifies the device, then the `capabilities` object holds the
-device-specific capabilities:
-
 ```json
 {"type":"capabilities","id":1,"ok":true,
  "boot_id":"0e86a327","proto":2,
@@ -52,9 +49,7 @@ device-specific capabilities:
  "capabilities":{
    "focuser":{"relative_move":true,"signed_counter":true,"stop":true,
               "local_buttons":false,"tmc_uart":true,"encoder":false,
-              "home_sensor":false,"temp_comp":false,"enable":true},
-   "fan":{"mode":["off","auto","manual"],"speed":true,"rpm":true},
-   "sensors":{"ambient":"SHT31","mirror":"DS18B20","vibration":"ADXL345"}}}
+              "home_sensor":false,"temp_comp":false,"enable":true}}}
 ```
 
 - `device_type`: `mount` | `accessories` — the discriminator.
@@ -64,48 +59,37 @@ device-specific capabilities:
 
 | Operation | Status |
 |---|---|
-| `capabilities` | Unified handshake header + device-specific capabilities (real). |
-| `state / device` | `power_external_present`, `health`, `focuser_busy`, `fan_mode`, `faults[]` (real). |
+| `capabilities` | Unified handshake header + focuser capabilities (real). |
+| `state / device` | `power_external_present`, `health`, `focuser_busy`, `faults[]` (real). |
 | `state / focuser` | `counter_steps`, `enabled`, `is_moving`, `op_id`, counters, `driver.uart_ok` (real). |
 | `action / focuser / move` | `params.delta_steps` + `expected_counter` → `motors_move_by` (real). |
 | `action / focuser / stop` | `motors_stop` (real). |
 | `action / device / restart` | Deferred reboot (real). |
-| `state / fan` | `mode`, `power`, `speed`, `manual_speed`, `rpm`, `power_available` (real; `rpm` is a theoretical estimate from the PWM duty until the tach is wired). |
-| `state / vibration` | Per-axis RMS from the ADXL345 (real). |
-| `state / environment` | Real (SHT31 ambient + humidity; DS18B20 mirror temperature). |
-| `state / buttons` | Button press states (real, debounced). |
+| `state / buttons` | Focuser button press state (real, debounced). |
 | `state / operation` | Last operation's status. |
 | `config / <group> / get` | Read-only mock; `set` → `NOT_SUPPORTED`. |
-| `control / fan / mode` | `params.value` (`off`/`auto`/`manual`). |
-| `control / fan / speed` | `params.value` (`FAN_SPEED_MIN`–`FAN_SPEED_MAX`) → manual PWM (applied in MANUAL). |
 | `control / focuser / enabled` | `params.value` (`true`/`false`) → `motors_set_enabled`. |
 | `control / device / session_open`, `heartbeat` | Minimal, no real lease enforcement. |
 
 ## Error codes (strings)
 
-`INVALID_ARGUMENT`, `OUT_OF_RANGE`, `NOT_SUPPORTED`, `NOT_CONNECTED`, `BUSY`,
-`COUNTER_CHANGED`, `POWER_ABSENT`, `DRIVER_FAULT`, `DISABLED`, `SENSOR_FAULT`,
-`STALE_DATA`, `INTERNAL`, `ID_CONFLICT`.
+`INVALID_ARGUMENT`, `BUSY`, `COUNTER_CHANGED`, `POWER_ABSENT`, `DRIVER_FAULT`,
+`DISABLED`, `INTERNAL`, `NOT_SUPPORTED`.
 
 ## State error model
 
 Every `state/<target>` response carries `ok:true` and a `data.error` field that
 reports the subsystem's own condition:
 
-- `null` — healthy (or mock data, which is valid by definition).
-- `"SENSOR_ABSENT"` — the sensor was not detected at boot (e.g. ADXL345). The
-  value fields are `null`.
+- `null` — healthy.
 - `"DRIVER_FAULT"` — the TMC2209 is not initialised (e.g. no 12 V); the focuser
   cannot move.
 
-A `state` request **always answers**: a sensor fault is returned as an error
-state, never as a hang or a fabricated reading (no 0 °C / 0 m/s² placeholders).
-This keeps the serial connection alive and the rest of the device functional —
-one faulty sensor only degrades its own `state` target.
+A `state` request **always answers**: a driver fault is returned as an error state,
+never as a hang or a fabricated reading.
 
 ## Pending (out of this iteration)
 
 Events/subscription and push; real lease/heartbeat; op_id dedup by content
 (`OUTCOME_UNKNOWN`/`ID_CONFLICT`); `jog`, `guard`, `identify`, `clear_fault`,
-`driver_status`, `environment/refresh`, `vibration/enable|baseline|capture`;
-`config/set` with persistence; fan RPM (tach), real RPM readback.
+`driver_status`; `config/set` with persistence.

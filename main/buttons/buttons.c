@@ -1,16 +1,13 @@
-/* Buttons — buttons.c — local push buttons.
+/* Buttons — buttons.c — local push button.
  *
- * Two push-to-GND buttons (active-low): the focuser enable/disable toggle and
- * the fan mode cycle. Each button is read on the runtime loop, debounced, and
- * its press edge triggers the corresponding action.
+ * One push-to-GND button (active-low): the focuser enable/disable toggle. It is
+ * read on the runtime loop, debounced, and its press edge triggers the action.
  */
 #include "buttons.h"
 
 #include "config.h"
 #include "driver/gpio.h"
 #include "esp_err.h"
-#include "esp_log.h"
-#include "fan.h"
 #include "motors.h"
 
 /* Samples a level change must persist before it is accepted. At the 200 ms
@@ -24,7 +21,6 @@ typedef struct {
 } Button;
 
 static Button s_focuser_button;
-static Button s_fan_button;
 
 /* Button bridges the pin to GND, so pressed == LOW. */
 static bool read_raw(gpio_num_t pin) {
@@ -45,20 +41,9 @@ static bool debounce(Button *b, bool raw) {
     return b->pressed && !was_pressed;
 }
 
-/* Next fan mode in the cycle off → auto → manual → off. */
-static FanMode next_fan_mode(FanMode mode) {
-    switch (mode) {
-    case FAN_MODE_OFF:    return FAN_MODE_AUTO;
-    case FAN_MODE_AUTO:   return FAN_MODE_MANUAL;
-    case FAN_MODE_MANUAL: return FAN_MODE_OFF;
-    default:              return FAN_MODE_AUTO;
-    }
-}
-
 void buttons_init(void) {
     gpio_config_t config = {
-        .pin_bit_mask = (1ULL << BUTTON_FOCUSER_ENABLE_GPIO)
-                      | (1ULL << BUTTON_FAN_MODE_GPIO),
+        .pin_bit_mask = (1ULL << BUTTON_FOCUSER_ENABLE_GPIO),
         .mode = GPIO_MODE_INPUT,
         .pull_up_en = GPIO_PULLUP_ENABLE,
         .pull_down_en = GPIO_PULLDOWN_DISABLE,
@@ -70,22 +55,13 @@ void buttons_init(void) {
 void buttons_update(void) {
     bool focuser_press = debounce(&s_focuser_button,
                                   read_raw(BUTTON_FOCUSER_ENABLE_GPIO));
-    bool fan_press = debounce(&s_fan_button, read_raw(BUTTON_FAN_MODE_GPIO));
 
     if (focuser_press) {
         bool enabled = !motors_is_enabled();
         motors_set_enabled(enabled);
     }
-
-    if (fan_press) {
-        fan_set_mode(next_fan_mode(fan_get_mode()));
-    }
 }
 
 bool buttons_focuser_enable_pressed(void) {
     return s_focuser_button.pressed;
-}
-
-bool buttons_fan_mode_pressed(void) {
-    return s_fan_button.pressed;
 }

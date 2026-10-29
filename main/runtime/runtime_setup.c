@@ -10,13 +10,10 @@
 
 #include "board.h"
 #include "buttons.h"
-#include "environment.h"
-#include "fan.h"
 #include "led.h"
 #include "motors.h"
 #include "tmc.h"
 #include "usb_cdc.h"
-#include "vibration.h"
 
 static const char *TAG = "RUNTIME_SETUP";
 
@@ -49,11 +46,6 @@ void setup_init(void) {
                  esp_err_to_name(motors_err));
     }
 
-    /* Environment first so the fan can seed its AUTO speed from it, then the
-     * fan (PWM + relay), vibration (ADXL345), and the buttons. */
-    environment_init();
-    fan_init();
-    vibration_init();
     buttons_init();
 
     /* USB CDC-ACM transport — the protocol is wired to it by proto_init(). */
