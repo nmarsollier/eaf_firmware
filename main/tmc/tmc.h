@@ -25,14 +25,6 @@
 esp_err_t tmc2209_hw_init(void);
 
 /*
- * Re-configure the driver registers after the 12 V rail returns. The UART
- * peripheral (on the ESP) stays powered, so only the TMC2209's registers —
- * lost while the driver was unpowered — need to be rewritten. Does not
- * re-install the UART.
- */
-esp_err_t tmc2209_reinit(void);
-
-/*
  * Query whether the TMC2209 UART and driver were initialised successfully.
  * Used for error-state LED signalling.
  */

@@ -27,7 +27,7 @@ Response (`ok:true` + `data`, or `ok:false` + `error`):
 {"proto":2,"type":"action","id":42,"session":"g-7f2a","boot_id":"a1b2c3d4",
  "ok":true,"data":{...}}
 {"proto":2,"type":"action","id":42,"session":"g-7f2a","boot_id":"a1b2c3d4",
- "ok":false,"error":{"code":"POWER_ABSENT","message":"No external power","field":null}}
+ "ok":false,"error":{"code":"DRIVER_FAULT","message":"TMC driver fault","field":null}}
 ```
 
 - `type`: `capabilities` | `state` | `config` | `control` | `action`.
@@ -35,6 +35,11 @@ Response (`ok:true` + `data`, or `ok:false` + `error`):
 - `action` (for `type=action`) or `op` (for control/config/state) names the operation.
 - `params` is an object; `id` is a non-zero uint32 (0 is reserved for events, not yet
   implemented); `session`/`boot_id` are strings.
+
+`action` requests are idempotent by `id`: a retried request with the same non-zero
+`id` replays the original response verbatim instead of re-executing (a relative
+`move` would otherwise move the focuser again). `id` 0 (or a reconnect, which resets
+the ring) disables this.
 
 `capabilities` is the exception: it uses the unified identification header below
 instead of the session/data envelope.
@@ -60,21 +65,21 @@ instead of the session/data envelope.
 | Operation | Status |
 |---|---|
 | `capabilities` | Unified handshake header + focuser capabilities (real). |
-| `state / device` | `power_external_present`, `health`, `focuser_busy`, `faults[]` (real). |
+| `state / device` | `power_external_present` (always `true`), `health`, `focuser_busy`, `faults[]` (real). |
 | `state / focuser` | `counter_steps`, `enabled`, `is_moving`, `op_id`, counters, `driver.uart_ok` (real). |
 | `action / focuser / move` | `params.delta_steps` + `expected_counter` → `motors_move_by` (real). |
 | `action / focuser / stop` | `motors_stop` (real). |
 | `action / device / restart` | Deferred reboot (real). |
 | `action / device / bootloader` | Reboot into ROM download mode (real, for button-less flashing). |
 | `state / buttons` | Focuser button press state (real, debounced). |
-| `state / operation` | Last operation's status. |
+| `state / operation` | Last operation: `op_id`, `status` (`idle`/`running`/`completed`/`cancelled`/`failed`) and `result`. |
 | `config / <group> / get` | Read-only mock; `set` → `NOT_SUPPORTED`. |
 | `control / focuser / enabled` | `params.value` (`true`/`false`) → `motors_set_enabled`. |
 | `control / device / session_open`, `heartbeat` | Minimal, no real lease enforcement. |
 
 ## Error codes (strings)
 
-`INVALID_ARGUMENT`, `BUSY`, `COUNTER_CHANGED`, `POWER_ABSENT`, `DRIVER_FAULT`,
+`INVALID_ARGUMENT`, `BUSY`, `COUNTER_CHANGED`, `DRIVER_FAULT`,
 `DISABLED`, `INTERNAL`, `NOT_SUPPORTED`.
 
 ## State error model
@@ -83,8 +88,7 @@ Every `state/<target>` response carries `ok:true` and a `data.error` field that
 reports the subsystem's own condition:
 
 - `null` — healthy.
-- `"DRIVER_FAULT"` — the TMC2209 is not initialised (e.g. no 12 V); the focuser
-  cannot move.
+- `"DRIVER_FAULT"` — the TMC2209 is not initialised; the focuser cannot move.
 
 A `state` request **always answers**: a driver fault is returned as an error state,
 never as a hang or a fabricated reading.

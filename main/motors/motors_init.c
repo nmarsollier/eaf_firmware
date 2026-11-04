@@ -5,7 +5,6 @@
  */
 #include "motors.h"
 #include "motors_internal.h"
-#include "board.h"
 #include "tmc.h"
 
 #include "esp_err.h"
@@ -64,18 +63,10 @@ esp_err_t motors_init(void) {
     }
 
     /* The TMC2209 must have been configured (tmc2209_hw_init) before this
-     * point. Missing with power present is an unrecoverable hardware fault;
-     * missing with power off is a recoverable power fault — re-initialise the
-     * driver when power returns. */
+     * point; a missing driver is an unrecoverable hardware fault. */
     if (!tmc2209_is_initialized()) {
-        if (board_has_external_power()) {
-            ESP_LOGE(TAG, "TMC2209 not initialised with power present — hardware fault");
-            motors_enter_hardware_fault();
-        } else {
-            ESP_LOGI(TAG, "TMC2209 not initialised (no power) — will re-init on power-on");
-            motors_enter_error_state();
-            motors_mark_power_fault();
-        }
+        ESP_LOGE(TAG, "TMC2209 not initialised — hardware fault");
+        motors_enter_hardware_fault();
     }
 
     return ESP_OK;

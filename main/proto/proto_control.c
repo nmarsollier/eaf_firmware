@@ -48,8 +48,14 @@ static void handle_session_open(uint32_t id, const char *session, char *out, siz
     size_t len = 0;
     out[0] = '\0';
     proto_env_begin(out, cap, &len, "control", id, session, true);
+
+    /* `session` is echoed again inside data — escape it (the header echo in
+     * proto_env_begin does not carry over to the data payload). */
+    char esc_session[PROTO_MAX_SESSION_LEN * 6 + 1];
+    proto_json_escape(session, esc_session, sizeof(esc_session));
+
     proto_buf_append(out, cap, &len,
-        ",\"data\":{\"session\":\"%s\",\"boot_id\":\"", session);
+        ",\"data\":{\"session\":\"%s\",\"boot_id\":\"", esc_session);
     char boot[9];
     proto_boot_id_str(boot, sizeof(boot));
     proto_buf_append(out, cap, &len, "%s", boot);

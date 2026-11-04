@@ -5,16 +5,15 @@ Keep this file in a simple format so it can be read and edited quickly.
 ## Reference projects
 
 - **`~/Dev/bft_firmware`** — ESP32-S3 fork equatorial mount firmware (the mount
-  this focuser pairs with). Reference for the motor logic, 12 V detection and the
-  USB CDC-ACM serial protocol.
+  this focuser pairs with). Reference for the motor logic and the USB CDC-ACM serial
+  protocol.
 - **`~/Dev/mount_panel`** — Go gateway (Alpaca/UI). Exposes the Alpaca Focuser for
   this project.
 
 ## Project definition
 
 - Electronic focuser (EAF) for a Newtonian telescope, on ESP32-S3.
-- Functions: EAF (NEMA 11 motor + TMC2209 driver), external 12 V detection and two
-  status LEDs (board + focuser).
+- Functions: EAF (NEMA 11 motor + TMC2209 driver) and an onboard RGB status LED.
 - 12 V supply (TMC2209 and ESP); the ESP is also powered over USB.
 - USB CDC-ACM communication with JSON messages.
 - Hardware detail in `README.md`.
@@ -28,9 +27,8 @@ Desktop app (Go) (Alpaca/UI) → USB CDC-ACM → Proto → Focuser → TMC2209/G
 ```
 
 - **config** (`main/config/`) — single source of truth for pins and build constants.
-- **board** (`main/board/`) — 12 V power sense.
-- **led** (`main/led/`) — the board and focuser status LEDs.
-- **tmc** (`main/tmc/`) — TMC2209 (single-wire UART + EN), re-init on 12 V return.
+- **led** (`main/led/`) — the onboard RGB status LED.
+- **tmc** (`main/tmc/`) — TMC2209 (single-wire UART + EN).
 - **motors** (`main/motors/`) — focuser motion (STEP/DIR, RMT, ramp).
 - **usb_cdc** (`main/usb_cdc/`) — USB CDC-ACM transport.
 - **proto** (`main/proto/`) — `proto=2` protocol (framing, dispatch, handlers).
@@ -39,16 +37,15 @@ Desktop app (Go) (Alpaca/UI) → USB CDC-ACM → Proto → Focuser → TMC2209/G
 
 ## Current state
 
-Implemented: `board` (12 V sense), `led` (board + focuser LEDs), `tmc` (TMC2209 with
-re-init on 12 V return), `motors` (motion), `usb_cdc` (transport), `proto` (`proto=2`
-protocol, `device_id="eaf"`, with capabilities/state/action/config/control handlers)
-and `buttons` (local focuser enable/disable toggle).
+Implemented: `led` (onboard RGB status LED), `tmc` (TMC2209), `motors` (motion),
+`usb_cdc` (transport), `proto` (`proto=2` protocol, `device_id="eaf"`, with
+capabilities/state/action/config/control handlers) and `buttons` (local focuser
+enable/disable toggle).
 
-LED behaviour: the board LED flags a missing 12 V rail; the focuser LED flags a TMC
-driver fault (off when 12 V is missing or the focuser is disabled). A power-loss error
-is shown only by the board LED.
+LED behaviour: the onboard RGB LED is green when healthy and green-beacons on a TMC
+driver fault.
 
-One physical button is wired (push-to-GND on GPIO 1): focuser enable/disable toggle.
+One physical button is wired (push-to-GND on GPIO 8): focuser enable/disable toggle.
 
 Pending: events/extended session, `config/set` with persistence, and the Go gateway.
 Contract in `main/proto/README.md`.

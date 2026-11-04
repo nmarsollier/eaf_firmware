@@ -25,11 +25,19 @@ MotorResultCode motors_stop(void) {
     motors_queue_clear();
 
     /* Wait for the motion task to finish the in-flight RMT batch and settle,
-     * so the counter is final before the caller reads it. */
+     * so the counter is final before the caller reads it. The RMT transmit
+     * timeout is 5 s, so wait a little longer to guarantee the settle. */
     if (was_moving) {
-        if (xSemaphoreTake(motors_idle_sem, pdMS_TO_TICKS(500)) != pdTRUE) {
-            ESP_LOGW(TAG, "motion task did not settle within 500 ms");
+        if (xSemaphoreTake(motors_idle_sem, pdMS_TO_TICKS(5500)) != pdTRUE) {
+            ESP_LOGE(TAG, "motion task did not settle within 5.5 s");
+            motors_enter_hardware_fault();
+            return MOTOR_ERR_HARDWARE_ERROR;
         }
+    }
+
+    /* The motion task may have hit a fault while settling — keep that state. */
+    if (motors_status_is_error(motors_state.status)) {
+        return MOTOR_ERR_HARDWARE_ERROR;
     }
 
     portENTER_CRITICAL(&motors_state_lock);

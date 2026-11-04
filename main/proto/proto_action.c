@@ -22,14 +22,11 @@ static void get_session(const char *req, char *out, size_t cap) {
 
 /* Map a motors result to a protocol error code string. */
 static const char *motor_error_code(void) {
-    if (!board_has_external_power()) {
-        return "POWER_ABSENT";
-    }
     return "DRIVER_FAULT";
 }
 
 /* Error code for a rejected move: a disabled focuser is distinct from a
- * hardware fault or a missing rail. */
+ * hardware fault. */
 static const char *move_error_code(MotorResultCode r) {
     if (r == MOTOR_ERR_DISABLED) {
         return "DISABLED";
@@ -97,6 +94,13 @@ static void handle_move(const char *req, uint32_t id, const char *session,
                  "move requires params.delta_steps");
         return;
     }
+    /* The motion task counts a single move in uint32 steps — reject a delta
+     * whose magnitude does not fit. */
+    if (delta < -(int64_t) UINT32_MAX || delta > (int64_t) UINT32_MAX) {
+        emit_err(out, cap, "action", id, session, "INVALID_ARGUMENT",
+                 "delta_steps out of range");
+        return;
+    }
 
     MotorsState ms = motors_current_state();
 
@@ -132,26 +136,34 @@ static void handle_move(const char *req, uint32_t id, const char *session,
     }
 
     proto_operation_start(ms.position, ms.position + delta);
-    const ProtoOperation *op = proto_operation_get();
+    ProtoOperation op = proto_operation_get();
 
     emit_ok(out, cap, "action", id, session,
             "\"op_id\":\"%s\",\"status\":\"running\",\"is_moving\":true,"
             "\"counter_steps\":%lld,\"target_counter\":%lld",
-            op->op_id, (long long) ms.position, (long long) op->target_counter);
+            op.op_id, (long long) ms.position, (long long) op.target_counter);
+    return;
 }
 
 /* ── focuser stop ──────────────────────────────────────────── */
 
 static void handle_stop(uint32_t id, const char *session, char *out, size_t cap) {
-    motors_stop();
+    MotorResultCode r = motors_stop();
+    if (r != MOTOR_OK) {
+        emit_err(out, cap, "action", id, session, "INTERNAL",
+                 "stop did not settle");
+        return;
+    }
+
     proto_operation_cancel();
 
     MotorsState ms = motors_current_state();
-    const ProtoOperation *op = proto_operation_get();
+    ProtoOperation op = proto_operation_get();
 
     emit_ok(out, cap, "action", id, session,
             "\"is_moving\":false,\"counter_steps\":%lld,\"cancelled_op_id\":\"%s\"",
-            (long long) ms.position, op->op_id);
+            (long long) ms.position, op.op_id);
+    return;
 }
 
 /* ── device restart ────────────────────────────────────────── */
@@ -166,9 +178,11 @@ static void handle_restart(uint32_t id, const char *session, char *out, size_t c
         esp_timer_start_once(timer, 200 * 1000);
         emit_ok(out, cap, "action", id, session,
                 "\"op_id\":\"\",\"status\":\"accepted\"");
+        return;
     } else {
         emit_err(out, cap, "action", id, session, "INTERNAL",
                  "restart unavailable");
+        return;
     }
 }
 
@@ -184,9 +198,11 @@ static void handle_bootloader(uint32_t id, const char *session, char *out, size_
         esp_timer_start_once(timer, 200 * 1000);
         emit_ok(out, cap, "action", id, session,
                 "\"op_id\":\"\",\"status\":\"accepted\"");
+        return;
     } else {
         emit_err(out, cap, "action", id, session, "INTERNAL",
                  "bootloader unavailable");
+        return;
     }
 }
 
@@ -201,6 +217,12 @@ void proto_handle_action(const char *req, uint32_t id, char *out, size_t cap) {
     proto_json_get_string(req, "action", action, sizeof(action));
     get_session(req, session, sizeof(session));
 
+    /* Idempotency: a retried action id replays its original response instead of
+     * re-executing (a relative move would otherwise move the focuser again). */
+    if (proto_action_lookup(id, out, cap)) {
+        return;
+    }
+
     if (strcmp(target, "focuser") == 0 && strcmp(action, "move") == 0) {
         handle_move(req, id, session, out, cap);
     } else if (strcmp(target, "focuser") == 0 && strcmp(action, "stop") == 0) {
@@ -213,4 +235,6 @@ void proto_handle_action(const char *req, uint32_t id, char *out, size_t cap) {
         emit_err(out, cap, "action", id, session, "NOT_SUPPORTED",
                  "unknown action");
     }
+
+    proto_action_record(id, out);
 }

@@ -412,8 +412,9 @@ static bool parse_int_span(const char *s, const char *e, int *out) {
     int64_t limit = neg ? ((int64_t) INT_MAX + 1) : (int64_t) INT_MAX;
     for (const char *p = s; p < e; p++) {
         if (*p < '0' || *p > '9') return false;   /* rejects '.', 'e', '+' */
-        v = v * 10 + (int64_t) (*p - '0');
-        if (v > limit) return false;
+        int64_t digit = (int64_t) (*p - '0');
+        if (v > (limit - digit) / 10) return false;   /* v*10+digit would overflow */
+        v = v * 10 + digit;
     }
     *out = (int) (neg ? -v : v);
     return true;
@@ -430,10 +431,12 @@ bool proto_json_get_int(const char *json, const char *key, int *out) {
 static bool parse_u32_span(const char *s, const char *e, uint32_t *out) {
     if (s >= e) return false;
     uint64_t v = 0;
+    uint64_t limit = UINT32_MAX;
     for (const char *p = s; p < e; p++) {
         if (*p < '0' || *p > '9') return false;   /* rejects '-', '.', 'e', '+' */
-        v = v * 10 + (uint64_t) (*p - '0');
-        if (v > UINT32_MAX) return false;
+        uint64_t digit = (uint64_t) (*p - '0');
+        if (v > (limit - digit) / 10) return false;   /* v*10+digit would overflow */
+        v = v * 10 + digit;
     }
     *out = (uint32_t) v;
     return true;
@@ -459,10 +462,16 @@ static bool parse_i64_span(const char *s, const char *e, int64_t *out) {
     uint64_t limit = neg ? 9223372036854775808ULL : 9223372036854775807ULL;
     for (const char *p = s; p < e; p++) {
         if (*p < '0' || *p > '9') return false;
-        v = v * 10 + (uint64_t) (*p - '0');
-        if (v > limit) return false;
+        uint64_t digit = (uint64_t) (*p - '0');
+        if (v > (limit - digit) / 10) return false;   /* v*10+digit would overflow */
+        v = v * 10 + digit;
     }
-    *out = neg ? -(int64_t) v : (int64_t) v;
+    if (neg) {
+        /* v == 2^63 is INT64_MIN — negating it in signed arithmetic is UB. */
+        *out = (v == 9223372036854775808ULL) ? INT64_MIN : -(int64_t) v;
+    } else {
+        *out = (int64_t) v;
+    }
     return true;
 }
 
@@ -510,5 +519,49 @@ bool proto_buf_append(char *buf, size_t cap, size_t *len, const char *fmt, ...) 
         return false;   /* truncated */
     }
     *len += (size_t) n;
+    return true;
+}
+
+/* Escape a string for embedding inside a JSON string literal: quotes,
+ * backslashes and control characters are escaped so the result stays valid
+ * JSON. Returns true on success, false if `cap` is too small. */
+bool proto_json_escape(const char *src, char *out, size_t cap) {
+    if (out == NULL || cap == 0) {
+        return false;
+    }
+
+    size_t i = 0;
+    for (const char *s = src; *s != '\0'; s++) {
+        unsigned char c = (unsigned char) *s;
+        const char *esc = NULL;
+        switch (c) {
+        case '"':  esc = "\\\""; break;
+        case '\\': esc = "\\\\"; break;
+        case '\b': esc = "\\b";  break;
+        case '\f': esc = "\\f";  break;
+        case '\n': esc = "\\n";  break;
+        case '\r': esc = "\\r";  break;
+        case '\t': esc = "\\t";  break;
+        default:   break;
+        }
+
+        if (esc != NULL) {
+            for (const char *q = esc; *q != '\0'; q++) {
+                if (i >= cap - 1) return false;
+                out[i++] = *q;
+            }
+        } else if (c < 0x20) {
+            char buf[8];
+            snprintf(buf, sizeof(buf), "\\u%04x", c);
+            for (const char *q = buf; *q != '\0'; q++) {
+                if (i >= cap - 1) return false;
+                out[i++] = *q;
+            }
+        } else {
+            if (i >= cap - 1) return false;
+            out[i++] = (char) c;
+        }
+    }
+    out[i] = '\0';
     return true;
 }

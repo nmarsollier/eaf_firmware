@@ -1,7 +1,6 @@
 /* Led — led_beacon.c
  *
- * Purpose: beacon animation for the fault state (12 V missing or TMC driver
- * fault).
+ * Purpose: beacon animation for the fault state (TMC driver fault).
  *
  * Two quick green blinks, then a pause — like a lighthouse — so a fault is
  * obvious at a glance. Driven by a one-shot esp_timer that re-arms itself.

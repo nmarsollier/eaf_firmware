@@ -2,7 +2,6 @@
 
 #include "driver/gpio.h"
 #include "driver/uart.h"
-#include "hal/adc_types.h"
 
 /*
  * EAF hardware configuration.
@@ -18,10 +17,6 @@
 /* Status LED — onboard RGB (WS2812), driven via RMT. GPIO 48 on the common
  * Super Mini (clone variants may use GPIO 21). */
 #define LED_GPIO        GPIO_NUM_48
-
-/* External 12 V rail detection — GPIO 13 (ADC2_CH2). */
-#define BOARD_POWER_ADC_UNIT    ADC_UNIT_2
-#define BOARD_POWER_ADC_CHANNEL ADC_CHANNEL_2
 
 /* TMC2209 driver — single focuser axis, single-wire UART. */
 #define TMC_UART_NUM    UART_NUM_1

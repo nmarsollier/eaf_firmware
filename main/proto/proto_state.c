@@ -35,15 +35,13 @@ static const char *reset_reason_str(void) {
 static void state_device(char *out, size_t cap, uint32_t id, const char *session) {
     MotorsState ms = motors_current_state();
     bool fault = motors_status_is_error(ms.status) || !tmc2209_is_initialized();
-    bool power = board_has_external_power();
 
     size_t len = 0;
     out[0] = '\0';
     proto_env_begin(out, cap, &len, "state", id, session, true);
     proto_buf_append(out, cap, &len,
-        ",\"data\":{\"power_external_present\":%s,\"health\":\"%s\","
+        ",\"data\":{\"power_external_present\":true,\"health\":\"%s\","
         "\"focuser_busy\":%s,\"reset_reason\":\"%s\",\"faults\":[",
-        power ? "true" : "false",
         fault ? "fault" : "ok",
         ms.status == MOTORS_STATUS_MOVING ? "true" : "false",
         reset_reason_str());
@@ -61,7 +59,7 @@ static void state_device(char *out, size_t cap, uint32_t id, const char *session
 
 static void state_focuser(char *out, size_t cap, uint32_t id, const char *session) {
     MotorsState ms = motors_current_state();
-    const ProtoOperation *op = proto_operation_get();
+    ProtoOperation op = proto_operation_get();
     bool moving = ms.status == MOTORS_STATUS_MOVING;
     bool fault = motors_status_is_error(ms.status);
 
@@ -82,9 +80,9 @@ static void state_focuser(char *out, size_t cap, uint32_t id, const char *sessio
         (long long) ms.position,
         moving ? "true" : "false",
         moving ? "alpaca" : "none",
-        op->op_id, op->status,
-        (long long) op->start_counter, (long long) op->target_counter,
-        (long long) op->executed_steps,
+        op.op_id, op.status,
+        (long long) op.start_counter, (long long) op.target_counter,
+        (long long) op.executed_steps,
         motors_is_enabled() ? "true" : "false",
         tmc2209_is_initialized() ? "true" : "false",
         fault ? "\"DRIVER_FAULT\"" : "null");
@@ -114,7 +112,7 @@ static void state_buttons(char *out, size_t cap, uint32_t id, const char *sessio
 /* ── state / operation ─────────────────────────────────────── */
 
 static void state_operation(char *out, size_t cap, uint32_t id, const char *session) {
-    const ProtoOperation *op = proto_operation_get();
+    ProtoOperation op = proto_operation_get();
 
     size_t len = 0;
     out[0] = '\0';
@@ -122,7 +120,7 @@ static void state_operation(char *out, size_t cap, uint32_t id, const char *sess
     proto_buf_append(out, cap, &len,
         ",\"data\":{\"op_id\":\"%s\",\"status\":\"%s\",\"target\":\"focuser\","
         "\"started_ms\":0,\"ended_ms\":0,\"result\":\"%s\",\"error\":null}}",
-        op->op_id, op->status, op->status);
+        op.op_id, op.status, op.status);
 }
 
 /* ── dispatcher ────────────────────────────────────────────── */

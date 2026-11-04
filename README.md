@@ -1,25 +1,23 @@
 # eaf_firmware — Electronic Focuser
 
 Electronic focuser (EAF) for a Newtonian telescope. This board drives the focuser
-only: the fan and the ambient/mirror/vibration sensors live in their own boards
-(`fan_firmware` and `temp_firmware`).
+only: the fan and the ambient/vibration sensors live in their own boards
+(`fan_firmware` and `amb_firmware`).
 
 ## Functionality
 
 - EAF (electronic autofocuser): NEMA 11 stepper + TMC2209 driver, STEP/DIR over RMT
   with a trapezoidal acceleration ramp.
-- External 12 V detection (ADC).
-- An onboard RGB status LED (WS2812) that flags a missing rail or a TMC driver fault.
+- An onboard RGB status LED (WS2812) that flags a TMC driver fault.
 - A local focuser enable/disable button (releases the motor's holding torque).
 
-## Implementation status (October 2026)
+## Implementation status (November 2026)
 
 | Module | Role | Pins |
 |---|---|---|
-| `board` | 12 V power sense (ADC). 12 V missing → status LED in *beacon* (error). | ADC `BOARD_POWER_ADC_CHANNEL` |
-| `led` | Onboard RGB status LED (WS2812): green when healthy, green beacon on a fault. | `LED_GPIO` |
-| `tmc` | TMC2209 over single-wire UART, init with verification and **re-init on 12 V return**. | EN `TMC_EN_GPIO`, TX `TMC_TX_GPIO` (1 kΩ), RX `TMC_RX_GPIO`, STEP `TMC_STEP_GPIO`, DIR `TMC_DIR_GPIO` |
-| `motors` | Focuser motion: STEP/DIR over RMT with trapezoidal ramp, `move_to`/`move_by`/`stop`, power gating. | — |
+| `led` | Onboard RGB status LED (WS2812): green when healthy, green beacon on a TMC fault. | `LED_GPIO` |
+| `tmc` | TMC2209 over single-wire UART, init with verification. | EN `TMC_EN_GPIO`, TX `TMC_TX_GPIO` (1 kΩ), RX `TMC_RX_GPIO`, STEP `TMC_STEP_GPIO`, DIR `TMC_DIR_GPIO` |
+| `motors` | Focuser motion: STEP/DIR over RMT with trapezoidal ramp, `move_to`/`move_by`/`stop`. | — |
 | `buttons` | One local push button (active-low, debounced): focuser enable/disable. | focuser `BUTTON_FOCUSER_ENABLE_GPIO` |
 | `usb_cdc` | USB CDC-ACM transport (TinyUSB). | — |
 | `proto` | `proto=2`, `device_id="eaf"`; handlers `capabilities`/`state`/`action`/`config`/`control`. | — |
@@ -40,19 +38,13 @@ The protocol contract is documented in [`main/proto/README.md`](main/proto/READM
 - The controller is fed with 12 V for the TMC2209 and the ESP.
 - The ESP32-S3 is powered two ways: USB from a PC, or 5 V from the 12 V rail via a
   step-down.
-- 12 V monitor: determines whether the whole circuit is correctly fed with 12 V.
-
-### ADC circuit
-
-When there is no voltage, the circuit enters an error state: the status LED pulses,
-marking the lack of 12 V supply.
 
 ### Status LED
 
 A single onboard RGB LED (WS2812 on GPIO 48), driven via RMT.
 
-- Green (solid) — healthy: 12 V present and no TMC driver fault.
-- Green beacon — fault: 12 V missing or a TMC driver fault.
+- Green (solid) — healthy: no TMC driver fault.
+- Green beacon — fault: TMC driver fault.
 
 ## EAF
 
@@ -80,8 +72,10 @@ Focuser V4 interface on top of this link.
 
 `make flash` sends the protocol's `action/device/bootloader` command over the USB
 CDC port, waits for the module to re-enumerate as USB-Serial-JTAG, and reflashes it
-— no BOOT button needed. `make enter-flash` does only the first step. The wire format
-is documented in [`main/proto/README.md`](main/proto/README.md).
+— no BOOT button needed. `make enter-flash` does only the first step. `make
+flash-download` flashes a board that is already in download mode (a blank board has
+no app to answer the bootloader command). The wire format is documented in
+[`main/proto/README.md`](main/proto/README.md).
 
 ## Alpaca
 

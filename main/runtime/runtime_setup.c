@@ -8,12 +8,13 @@
 #include "esp_log.h"
 #include "nvs_flash.h"
 
-#include "board.h"
 #include "buttons.h"
 #include "led.h"
 #include "motors.h"
 #include "tmc.h"
+#if CONFIG_TINYUSB_CDC_ENABLED
 #include "usb_cdc.h"
+#endif
 
 static const char *TAG = "RUNTIME_SETUP";
 
@@ -23,8 +24,8 @@ static const char *TAG = "RUNTIME_SETUP";
  * Objective: bring the core services, board peripherals, motor subsystem and
  * the USB transport online so the focuser starts in a usable state.
  *
- * LED state is managed exclusively by board_update() / motors_led_update()
- * in the runtime loop — no explicit set_state calls here.
+ * LED state is managed exclusively by led_update() in the runtime loop — no
+ * explicit set_state calls here.
  */
 void setup_init(void) {
     esp_err_t nvs_result = nvs_flash_init();
@@ -34,7 +35,6 @@ void setup_init(void) {
     }
     ESP_ERROR_CHECK(nvs_result);
 
-    board_init();
     led_init();
 
     /* Configure the TMC2209 (UART + EN). Logs its own failure. */
@@ -48,11 +48,13 @@ void setup_init(void) {
 
     buttons_init();
 
+#if CONFIG_TINYUSB_CDC_ENABLED
     /* USB CDC-ACM transport — the protocol is wired to it by proto_init(). */
     esp_err_t cdc_result = usb_cdc_init();
     if (cdc_result != ESP_OK) {
         ESP_LOGW(TAG, "USB CDC init failed: %s", esp_err_to_name(cdc_result));
     }
+#endif
 
     ESP_LOGI(TAG, "Board ready");
 }

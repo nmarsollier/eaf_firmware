@@ -1,13 +1,12 @@
 /* Motors - motors_error.c
  *
- * Purpose: error-state handling. The ERROR state is unrecoverable except
- * for the power-loss case (see motors_power.c), and always aborts any
- * in-flight motion.
+ * Purpose: error-state handling. The ERROR state is unrecoverable and always
+ * aborts any in-flight motion.
  */
 #include "motors_internal.h"
 
-/* Latched hardware fault — set by a boot-time init failure. Never cleared
- * by a power-loss recovery; only a reboot clears it. */
+/* Latched hardware fault — set by a boot-time init failure. Only a reboot
+ * clears it. */
 static bool s_hardware_fault = false;
 
 void motors_enter_error_state(void) {

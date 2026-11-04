@@ -7,8 +7,8 @@
  * Status LED — the onboard RGB indicator (WS2812 on GPIO 48).
  *
  * NORMAL — green (solid), the focuser is healthy.
- * ERROR  — green beacon (blink-blink-pause), a fault: the 12 V rail is missing
- *          or the TMC driver reports a hardware fault.
+ * ERROR  — green beacon (blink-blink-pause), a fault: the TMC driver reports a
+ *          hardware fault.
  *
  * All state decisions are made inside led_update(), the single public entry
  * point for LED state changes. No other module should call led_set_state()

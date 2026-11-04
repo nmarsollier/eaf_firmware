@@ -99,7 +99,7 @@ typedef struct {
 
 static const TmcAxis tmc_axes[] = {
     /* irun/ihold are provisional (test motor) — tune for the NEMA 11. */
-    { .name = "FOCUSER", .uart_num = TMC_UART_NUM, .tx_gpio = TMC_TX_GPIO, .rx_gpio = TMC_RX_GPIO, .irun = 12, .ihold = 6 },
+    { .name = "FOCUSER", .uart_num = TMC_UART_NUM, .tx_gpio = TMC_TX_GPIO, .rx_gpio = TMC_RX_GPIO, .irun = 8, .ihold = 4 },
 };
 
 /* ── UART helpers ──────────────────────────────────────────── */
@@ -514,15 +514,5 @@ esp_err_t tmc2209_hw_init(void)
         gpio_set_pull_mode(axis->rx_gpio, GPIO_PULLUP_ONLY);
     }
 
-    return tmc_configure_drivers();
-}
-
-/* Re-configure the driver registers after the 12 V rail returns. The UART
- * peripheral (on the ESP) stays powered, so only the TMC2209's registers —
- * lost while the driver was unpowered — need to be rewritten. */
-esp_err_t tmc2209_reinit(void)
-{
-    tmc_reset_diagnostics();
-    tmc_enable_driver();
     return tmc_configure_drivers();
 }

@@ -6,7 +6,6 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "board.h"
 #include "motors.h"
 #include "tmc.h"
 
@@ -32,9 +31,14 @@ void proto_config_rev_bump(void);
 
 /* ── Idempotency (ring keyed by request id) ───────────────── */
 
-typedef struct { uint32_t id; bool ok; const char *error; } proto_seen_entry_t;
-bool proto_action_lookup(uint32_t id, proto_seen_entry_t *out);
-void proto_action_record(uint32_t id, bool ok, const char *error);
+/* Replay a previously recorded ACTION response, or false when the id is
+ * unknown. A retried action id replays its original response instead of
+ * re-executing. `response` receives a NUL-terminated copy of the stored body. */
+bool proto_action_lookup(uint32_t id, char *response, size_t cap);
+
+/* Record an ACTION response body for later replay (proto_session.c). */
+void proto_action_record(uint32_t id, const char *response);
+
 void proto_session_reset(void);
 
 /* ── Operation tracking (op_id / op_status / counters) ────── */
@@ -50,7 +54,7 @@ typedef struct {
 void proto_operation_start(int64_t start_counter, int64_t target_counter);
 void proto_operation_cancel(void);
 void proto_operation_poll(void);
-const ProtoOperation *proto_operation_get(void);
+ProtoOperation proto_operation_get(void);
 
 /* ── JSON parser ──────────────────────────────────────────── */
 
@@ -65,6 +69,9 @@ bool proto_json_get_bool(const char *json, const char *key, bool *out);
 bool proto_json_get_object(const char *json, const char *key, char *out, size_t cap);
 bool proto_buf_append(char *buf, size_t cap, size_t *len, const char *fmt, ...)
     __attribute__((format(printf, 4, 5)));
+
+/* Escape `src` for embedding inside a JSON string literal (proto_json.c). */
+bool proto_json_escape(const char *src, char *out, size_t cap);
 
 /* ── Framing ──────────────────────────────────────────────── */
 
@@ -85,10 +92,18 @@ static inline void proto_env_begin(char *out, size_t cap, size_t *len,
                                    const char *session, bool ok) {
     char boot[9];
     proto_boot_id_str(boot, sizeof(boot));
+
+    /* `type` and `session` may be echoed back from the request, so escape both:
+     * an unescaped quote or newline would break the response JSON. */
+    char esc_type[PROTO_MAX_TYPE_LEN * 6 + 1];
+    char esc_session[PROTO_MAX_SESSION_LEN * 6 + 1];
+    proto_json_escape(type, esc_type, sizeof(esc_type));
+    proto_json_escape(session, esc_session, sizeof(esc_session));
+
     proto_buf_append(out, cap, len,
         "{\"proto\":%d,\"type\":\"%s\",\"id\":%lu,\"session\":\"%s\","
         "\"boot_id\":\"%s\",\"ok\":%s",
-        PROTO_VERSION, type, (unsigned long) id, session, boot,
+        PROTO_VERSION, esc_type, (unsigned long) id, esc_session, boot,
         ok ? "true" : "false");
 }
 

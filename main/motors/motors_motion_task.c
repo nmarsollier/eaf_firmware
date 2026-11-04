@@ -6,7 +6,7 @@
  *
  * The motion task is the sole writer of motors_state.position.
  * Status is written cooperatively by the motion task, motors_stop() and
- * the error/power paths, under motors_state_lock.
+ * the error path, under motors_state_lock.
  */
 #include "motors_internal.h"
 
@@ -94,6 +94,8 @@ static bool emit_steps(uint32_t period_ticks, uint32_t count,
         uint32_t encoded = motors_rmt_encode_steps(symbols, RMT_MEM_BLOCK_SYMBOLS,
                                                    period_ticks, n);
         if (motors_rmt_transmit(symbols, encoded) != ESP_OK) {
+            ESP_LOGE(TAG, "RMT transmit failed — hardware fault");
+            motors_enter_hardware_fault();
             return false;
         }
 
@@ -113,6 +115,11 @@ static void run_move(int64_t target, uint32_t generation)
 
     int64_t distance = target - read_position();
     if (distance == 0) {
+        return;
+    }
+    if (distance > (int64_t) UINT32_MAX || distance < -(int64_t) UINT32_MAX) {
+        ESP_LOGE(TAG, "move distance %lld out of range", (long long) distance);
+        motors_enter_hardware_fault();
         return;
     }
 

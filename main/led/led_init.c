@@ -23,6 +23,10 @@ void led_init(void) {
         .resolution_hz = LED_RMT_RES_HZ,
         .mem_block_symbols = 64,
         .trans_queue_depth = 4,
+        /* The LED and the STEP channel (motors_rmt.c) share one RMT group
+         * interrupt; its priority is set by the first channel created (this
+         * one) and must match motors' priority 3. */
+        .intr_priority = 3,
     };
     ESP_ERROR_CHECK(rmt_new_tx_channel(&tx_config, &led_tx_chan));
     ESP_ERROR_CHECK(rmt_enable(led_tx_chan));

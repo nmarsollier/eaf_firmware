@@ -7,11 +7,11 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
-#include "board.h"
 #include "buttons.h"
 #include "led.h"
-#include "motors.h"
+#if CONFIG_TINYUSB_CDC_ENABLED
 #include "proto.h"
+#endif
 
 #define MAIN_LOOP_PERIOD_MS     200
 #define MAIN_TASK_STACK_SIZE    4096
@@ -28,10 +28,10 @@ static void main_loop_task(void *arg) {
     const TickType_t period = pdMS_TO_TICKS(MAIN_LOOP_PERIOD_MS);
 
     while (true) {
-        board_update();
-        motors_update_power(board_has_external_power());
         buttons_update();
+#if CONFIG_TINYUSB_CDC_ENABLED
         proto_poll();
+#endif
         led_update();
         vTaskDelay(period);
     }

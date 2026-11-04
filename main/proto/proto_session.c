@@ -10,6 +10,7 @@
 #include "proto_internal.h"
 
 #include <stdio.h>
+#include <string.h>
 
 #include "esp_log.h"
 #include "esp_random.h"
@@ -23,11 +24,16 @@ static const char *NVS_CFG_REV = "cfg_rev";
 
 #define PROTO_SEEN_IDS 8
 
+typedef struct {
+    uint32_t id;
+    char response[PROTO_MAX_FRAME];   /* full response body (JSON) */
+} proto_seen_entry_t;
+
 static uint32_t s_boot_id;
 static uint32_t s_config_rev;
 
-/* Circular ring of executed action ids and their results.  `s_seen_next` is the
- * next slot to overwrite (the oldest once the ring is full). */
+/* Circular ring of executed action ids and their responses.  `s_seen_next` is
+ * the next slot to overwrite (the oldest once the ring is full). */
 static proto_seen_entry_t s_seen[PROTO_SEEN_IDS];
 static uint32_t s_seen_len;
 static uint32_t s_seen_next;
@@ -72,15 +78,15 @@ void proto_config_rev_bump(void) {
     }
 }
 
-bool proto_action_lookup(uint32_t id, proto_seen_entry_t *out) {
-    if (id == 0) {
-        return false;   /* no id — no idempotency */
+bool proto_action_lookup(uint32_t id, char *response, size_t cap) {
+    if (id == 0 || response == NULL || cap == 0) {
+        return false;   /* no id / no buffer — no idempotency */
     }
 
     portENTER_CRITICAL(&s_seen_lock);
     for (uint32_t i = 0; i < s_seen_len; i++) {
         if (s_seen[i].id == id) {
-            *out = s_seen[i];
+            snprintf(response, cap, "%s", s_seen[i].response);
             portEXIT_CRITICAL(&s_seen_lock);
             return true;
         }
@@ -89,8 +95,8 @@ bool proto_action_lookup(uint32_t id, proto_seen_entry_t *out) {
     return false;
 }
 
-void proto_action_record(uint32_t id, bool ok, const char *error) {
-    if (id == 0) {
+void proto_action_record(uint32_t id, const char *response) {
+    if (id == 0 || response == NULL) {
         return;
     }
 
@@ -98,14 +104,15 @@ void proto_action_record(uint32_t id, bool ok, const char *error) {
     /* Update an existing entry rather than duplicating it. */
     for (uint32_t i = 0; i < s_seen_len; i++) {
         if (s_seen[i].id == id) {
-            s_seen[i].ok = ok;
-            s_seen[i].error = error;
+            snprintf(s_seen[i].response, sizeof(s_seen[i].response), "%s", response);
             portEXIT_CRITICAL(&s_seen_lock);
             return;
         }
     }
 
-    s_seen[s_seen_next] = (proto_seen_entry_t){ .id = id, .ok = ok, .error = error };
+    s_seen[s_seen_next].id = id;
+    snprintf(s_seen[s_seen_next].response, sizeof(s_seen[s_seen_next].response),
+             "%s", response);
     s_seen_next = (s_seen_next + 1) % PROTO_SEEN_IDS;
     if (s_seen_len < PROTO_SEEN_IDS) {
         s_seen_len++;

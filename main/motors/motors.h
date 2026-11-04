@@ -51,13 +51,6 @@ esp_err_t motors_init(void);
  */
 void motors_enter_error_state(void);
 
-/*
- * Update the motors' view of the external 12 V rail. When power is lost the
- * motors enter ERROR and reject all motion; when power returns they recover
- * to READY (only if the error was caused by the power loss).
- */
-void motors_update_power(bool power_ok);
-
 /* Return a snapshot copy of the current MotorsState. */
 MotorsState motors_current_state(void);
 
@@ -83,7 +76,5 @@ const char *motors_status_to_string(MotorsStatus status);
 /* True if `status` is the fatal error state (motor fault). */
 bool motors_status_is_error(MotorsStatus status);
 
-/* True if a latched hardware fault occurred (e.g. TMC init failed with power
- * present). A power-loss ERROR does not set this — use it to tell a real
- * driver fault apart from a missing 12 V rail. */
+/* True if a latched hardware fault occurred (e.g. TMC init failed). */
 bool motors_has_hardware_fault(void);
