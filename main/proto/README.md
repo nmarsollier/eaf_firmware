@@ -65,6 +65,7 @@ instead of the session/data envelope.
 | `action / focuser / move` | `params.delta_steps` + `expected_counter` → `motors_move_by` (real). |
 | `action / focuser / stop` | `motors_stop` (real). |
 | `action / device / restart` | Deferred reboot (real). |
+| `action / device / bootloader` | Reboot into ROM download mode (real, for button-less flashing). |
 | `state / buttons` | Focuser button press state (real, debounced). |
 | `state / operation` | Last operation's status. |
 | `config / <group> / get` | Read-only mock; `set` → `NOT_SUPPORTED`. |

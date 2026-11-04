@@ -8,16 +8,16 @@ only: the fan and the ambient/mirror/vibration sensors live in their own boards
 
 - EAF (electronic autofocuser): NEMA 11 stepper + TMC2209 driver, STEP/DIR over RMT
   with a trapezoidal acceleration ramp.
-- External 12 V detection (ADC) and a board status LED that flags a missing rail.
-- A focuser status LED (TMC/focuser state).
+- External 12 V detection (ADC).
+- An onboard RGB status LED (WS2812) that flags a missing rail or a TMC driver fault.
 - A local focuser enable/disable button (releases the motor's holding torque).
 
 ## Implementation status (October 2026)
 
 | Module | Role | Pins |
 |---|---|---|
-| `board` | 12 V power sense (ADC). 12 V missing → board LED in *beacon* (error). | ADC `BOARD_POWER_ADC_CHANNEL` |
-| `led` | Status LEDs (board + focuser). | board `BOARD_LED_GPIO`, focuser `FOCUSER_LED_GPIO` |
+| `board` | 12 V power sense (ADC). 12 V missing → status LED in *beacon* (error). | ADC `BOARD_POWER_ADC_CHANNEL` |
+| `led` | Onboard RGB status LED (WS2812): green when healthy, green beacon on a fault. | `LED_GPIO` |
 | `tmc` | TMC2209 over single-wire UART, init with verification and **re-init on 12 V return**. | EN `TMC_EN_GPIO`, TX `TMC_TX_GPIO` (1 kΩ), RX `TMC_RX_GPIO`, STEP `TMC_STEP_GPIO`, DIR `TMC_DIR_GPIO` |
 | `motors` | Focuser motion: STEP/DIR over RMT with trapezoidal ramp, `move_to`/`move_by`/`stop`, power gating. | — |
 | `buttons` | One local push button (active-low, debounced): focuser enable/disable. | focuser `BUTTON_FOCUSER_ENABLE_GPIO` |
@@ -30,7 +30,7 @@ The protocol contract is documented in [`main/proto/README.md`](main/proto/READM
 
 | Component | Part |
 |---|---|
-| Microcontroller | ESP32-S3 <https://www.amazon.com/dp/B0DG8L7MQ9> |
+| Microcontroller | ESP32-S3 Super Mini <https://www.amazon.com/dp/B0GY3M83NL> |
 | Motor | NEMA 11 <https://www.amazon.com/dp/B0FHHSVXQ7> |
 | Driver | TMC2209 <https://www.amazon.com/gp/aw/d/B08WZFK9KT> |
 | Step-down | LM2596 <https://www.amazon.com/gp/aw/d/B0GZ524QTV> |
@@ -44,19 +44,15 @@ The protocol contract is documented in [`main/proto/README.md`](main/proto/READM
 
 ### ADC circuit
 
-When there is no voltage, the circuit enters an error state: the board LED pulses,
+When there is no voltage, the circuit enters an error state: the status LED pulses,
 marking the lack of 12 V supply.
 
-### LEDs
+### Status LED
 
-Two LEDs: board (general state) and focuser (driver state). The circuit is the same
-for both: LED cathode to GND, anode to a GPIO through a 100 Ω resistor; brightness is
-dimmed via PWM duty.
+A single onboard RGB LED (WS2812 on GPIO 48), driven via RMT.
 
-- Board LED — beacon (error) when 12 V is missing; dim otherwise.
-- Focuser LED — beacon on a TMC driver fault, bright while moving, dim when idle,
-  off when 12 V is missing or the focuser is disabled. A missing 12 V rail is a
-  board-level error, shown only by the board LED.
+- Green (solid) — healthy: 12 V present and no TMC driver fault.
+- Green beacon — fault: 12 V missing or a TMC driver fault.
 
 ## EAF
 
@@ -79,6 +75,13 @@ GPIOs) to configure `MICROSTEPS` microsteps and 0.8 A for smooth, silent operati
 USB-CDC with JSON messages. Provides the focuser state and processes the focuser
 commands needed for Alpaca. The Go gateway (`mount_panel`) implements the Alpaca
 Focuser V4 interface on top of this link.
+
+### Button-less flashing
+
+`make flash` sends the protocol's `action/device/bootloader` command over the USB
+CDC port, waits for the module to re-enumerate as USB-Serial-JTAG, and reflashes it
+— no BOOT button needed. `make enter-flash` does only the first step. The wire format
+is documented in [`main/proto/README.md`](main/proto/README.md).
 
 ## Alpaca
 

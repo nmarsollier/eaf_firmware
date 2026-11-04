@@ -2,7 +2,7 @@
  *
  * Purpose: sense whether the board is powered from the 12 V rail or is
  * running on USB only. Drives the ERROR state of the motors (and, through the
- * led module, the board LED) when the 12 V rail is absent.
+ * led module, the status LED) when the 12 V rail is absent.
  */
 #include "board.h"
 #include "config.h"

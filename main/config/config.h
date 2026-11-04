@@ -15,23 +15,21 @@
  * Pin assignments
  * ========================================================================= */
 
-/* Board status LED — direct GPIO, LEDC PWM (active-high: anode via 100 Ω). */
-#define BOARD_LED_GPIO          GPIO_NUM_35
+/* Status LED — onboard RGB (WS2812), driven via RMT. GPIO 48 on the common
+ * Super Mini (clone variants may use GPIO 21). */
+#define LED_GPIO        GPIO_NUM_48
 
-/* Focuser status LED — reflects the TMC/focuser state. */
-#define FOCUSER_LED_GPIO        GPIO_NUM_37
-
-/* External 12 V rail detection — GPIO 17 (ADC2_CH6). */
+/* External 12 V rail detection — GPIO 13 (ADC2_CH2). */
 #define BOARD_POWER_ADC_UNIT    ADC_UNIT_2
-#define BOARD_POWER_ADC_CHANNEL ADC_CHANNEL_6
+#define BOARD_POWER_ADC_CHANNEL ADC_CHANNEL_2
 
 /* TMC2209 driver — single focuser axis, single-wire UART. */
 #define TMC_UART_NUM    UART_NUM_1
-#define TMC_EN_GPIO     GPIO_NUM_9     /* EN — LOW = enabled */
-#define TMC_TX_GPIO     GPIO_NUM_18    /* ESP TX → 1 kΩ → PDN_UART */
-#define TMC_RX_GPIO     GPIO_NUM_8     /* ESP RX → PDN_UART (direct) */
-#define TMC_STEP_GPIO   GPIO_NUM_16    /* STEP — focuser motion */
-#define TMC_DIR_GPIO    GPIO_NUM_15    /* DIR — focuser motion */
+#define TMC_EN_GPIO     GPIO_NUM_7     /* EN — LOW = enabled */
+#define TMC_TX_GPIO     GPIO_NUM_6     /* ESP TX → 1 kΩ → PDN_UART */
+#define TMC_RX_GPIO     GPIO_NUM_5     /* ESP RX → PDN_UART (direct) */
+#define TMC_STEP_GPIO   GPIO_NUM_2     /* STEP — focuser motion */
+#define TMC_DIR_GPIO    GPIO_NUM_1     /* DIR — focuser motion */
 #define MICROSTEPS      16
 
 /* =========================================================================
@@ -39,7 +37,7 @@
  * ========================================================================= */
 
 /* Focuser enable/disable toggle. */
-#define BUTTON_FOCUSER_ENABLE_GPIO  GPIO_NUM_1
+#define BUTTON_FOCUSER_ENABLE_GPIO  GPIO_NUM_8
 
 /* =========================================================================
  * Focuser motion profile (tunable).

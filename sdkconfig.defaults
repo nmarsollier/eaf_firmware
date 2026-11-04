@@ -1,9 +1,9 @@
 # sdkconfig.defaults — project-specific overrides for eaf_firmware
 # Applied automatically by idf.py build on top of ESP-IDF defaults.
 
-# Flash: 8 MB (TODO: confirm the board's flash size — N8/N16).
-CONFIG_ESPTOOLPY_FLASHSIZE_8MB=y
-CONFIG_ESPTOOLPY_FLASHSIZE="8MB"
+# Flash: 4 MB (ESP32-S3 Super Mini — FH4, no PSRAM).
+CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y
+CONFIG_ESPTOOLPY_FLASHSIZE="4MB"
 
 # CPU: 240 MHz
 CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ_240=y
