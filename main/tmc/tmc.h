@@ -25,6 +25,20 @@
 esp_err_t tmc2209_hw_init(void);
 
 /*
+ * Probe the driver over UART: return true when it answers a register read.
+ * This doubles as the external-power sense — the driver is fed by VM (12 V),
+ * so it is silent when the rail is absent and its logic supply collapses.
+ */
+bool tmc2209_probe(void);
+
+/*
+ * Re-configure the driver registers after it stops answering and then answers
+ * again (power returned): its registers were lost while unpowered, so they are
+ * rewritten. Does not re-install the UART.
+ */
+esp_err_t tmc2209_reinit(void);
+
+/*
  * Query whether the TMC2209 UART and driver were initialised successfully.
  * Used for error-state LED signalling.
  */

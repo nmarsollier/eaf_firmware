@@ -51,6 +51,16 @@ esp_err_t motors_init(void);
  */
 void motors_enter_error_state(void);
 
+/*
+ * Update the motors' view of the external power rail (from the TMC probe).
+ * When power is lost the motors enter ERROR and reject all motion; when power
+ * returns the driver is re-initialised and the motors recover to READY.
+ */
+void motors_update_power(bool power_ok);
+
+/* True when the external power rail is present (cached from the last probe). */
+bool motors_has_power(void);
+
 /* Return a snapshot copy of the current MotorsState. */
 MotorsState motors_current_state(void);
 

@@ -107,6 +107,10 @@ extern MotorsState motors_state;
 /* Hardware-fault latch — set by motors_init() failure paths. */
 void motors_enter_hardware_fault(void);
 
+/* Mark the current ERROR as a recoverable power fault so a later power-on
+ * re-initialises the driver (motors_power.c). */
+void motors_mark_power_fault(void);
+
 /* =========================================================================
  * Task & queue lifecycle.
  * ========================================================================= */

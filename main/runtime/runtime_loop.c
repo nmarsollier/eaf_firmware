@@ -9,6 +9,8 @@
 
 #include "buttons.h"
 #include "led.h"
+#include "motors.h"
+#include "tmc.h"
 #if CONFIG_TINYUSB_CDC_ENABLED
 #include "proto.h"
 #endif
@@ -26,8 +28,16 @@
 static void main_loop_task(void *arg) {
     (void) arg;
     const TickType_t period = pdMS_TO_TICKS(MAIN_LOOP_PERIOD_MS);
+    unsigned int tick = 0;
 
     while (true) {
+        /* Every ~1 s, probe the TMC2209 over UART as the external-power sense
+         * and feed the result to the motors power gating. */
+        if (++tick >= 5) {
+            tick = 0;
+            motors_update_power(tmc2209_probe());
+        }
+
         buttons_update();
 #if CONFIG_TINYUSB_CDC_ENABLED
         proto_poll();

@@ -516,3 +516,20 @@ esp_err_t tmc2209_hw_init(void)
 
     return tmc_configure_drivers();
 }
+
+/* Probe the driver: a successful register read means it is powered and its
+ * UART is alive. Used as the external-power sense (the driver is fed by VM). */
+bool tmc2209_probe(void)
+{
+    uint32_t value = 0;
+    return tmc_read_register(&tmc_axes[0], TMC_REG_DRV_STATUS, &value) == ESP_OK;
+}
+
+/* Re-configure the driver registers after it stopped answering and then
+ * answered again (power returned). */
+esp_err_t tmc2209_reinit(void)
+{
+    tmc_reset_diagnostics();
+    tmc_enable_driver();
+    return tmc_configure_drivers();
+}

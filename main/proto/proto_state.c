@@ -35,13 +35,15 @@ static const char *reset_reason_str(void) {
 static void state_device(char *out, size_t cap, uint32_t id, const char *session) {
     MotorsState ms = motors_current_state();
     bool fault = motors_status_is_error(ms.status) || !tmc2209_is_initialized();
+    bool power = motors_has_power();
 
     size_t len = 0;
     out[0] = '\0';
     proto_env_begin(out, cap, &len, "state", id, session, true);
     proto_buf_append(out, cap, &len,
-        ",\"data\":{\"power_external_present\":true,\"health\":\"%s\","
+        ",\"data\":{\"power_external_present\":%s,\"health\":\"%s\","
         "\"focuser_busy\":%s,\"reset_reason\":\"%s\",\"faults\":[",
+        power ? "true" : "false",
         fault ? "fault" : "ok",
         ms.status == MOTORS_STATUS_MOVING ? "true" : "false",
         reset_reason_str());

@@ -18,6 +18,7 @@ set(main_srcs
         "motors/motors_motion_task.c"
         "motors/motors_current_state.c"
         "motors/motors_error.c"
+        "motors/motors_power.c"
         "motors/motors_move.c"
         "motors/motors_stop.c"
         "motors/motors_enable.c"

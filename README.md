@@ -8,16 +8,18 @@ only: the fan and the ambient/vibration sensors live in their own boards
 
 - EAF (electronic autofocuser): NEMA 11 stepper + TMC2209 driver, STEP/DIR over RMT
   with a trapezoidal acceleration ramp.
-- An onboard RGB status LED (WS2812) that flags a TMC driver fault.
+- External 12 V detection: the TMC2209 answers a UART probe only when its 12 V rail
+  is present.
+- An onboard RGB status LED (WS2812) that flags a missing rail or a TMC driver fault.
 - A local focuser enable/disable button (releases the motor's holding torque).
 
 ## Implementation status (November 2026)
 
 | Module | Role | Pins |
 |---|---|---|
-| `led` | Onboard RGB status LED (WS2812): green when healthy, green beacon on a TMC fault. | `LED_GPIO` |
-| `tmc` | TMC2209 over single-wire UART, init with verification. | EN `TMC_EN_GPIO`, TX `TMC_TX_GPIO` (1 kΩ), RX `TMC_RX_GPIO`, STEP `TMC_STEP_GPIO`, DIR `TMC_DIR_GPIO` |
-| `motors` | Focuser motion: STEP/DIR over RMT with trapezoidal ramp, `move_to`/`move_by`/`stop`. | — |
+| `led` | Onboard RGB status LED (WS2812): green when healthy, green beacon on a missing rail or TMC fault. | `LED_GPIO` |
+| `tmc` | TMC2209 over single-wire UART, init with verification; a periodic UART probe doubles as the 12 V sense, with re-init on power return. | EN `TMC_EN_GPIO`, TX `TMC_TX_GPIO` (1 kΩ), RX `TMC_RX_GPIO`, STEP `TMC_STEP_GPIO`, DIR `TMC_DIR_GPIO` |
+| `motors` | Focuser motion: STEP/DIR over RMT with trapezoidal ramp, `move_to`/`move_by`/`stop`, power gating. | — |
 | `buttons` | One local push button (active-low, debounced): focuser enable/disable. | focuser `BUTTON_FOCUSER_ENABLE_GPIO` |
 | `usb_cdc` | USB CDC-ACM transport (TinyUSB). | — |
 | `proto` | `proto=2`, `device_id="eaf"`; handlers `capabilities`/`state`/`action`/`config`/`control`. | — |
@@ -38,13 +40,15 @@ The protocol contract is documented in [`main/proto/README.md`](main/proto/READM
 - The controller is fed with 12 V for the TMC2209 and the ESP.
 - The ESP32-S3 is powered two ways: USB from a PC, or 5 V from the 12 V rail via a
   step-down.
+- 12 V sense: the TMC2209 is probed over UART every second; a missing response means
+  the 12 V rail is down.
 
 ### Status LED
 
 A single onboard RGB LED (WS2812 on GPIO 48), driven via RMT.
 
-- Green (solid) — healthy: no TMC driver fault.
-- Green beacon — fault: TMC driver fault.
+- Green (solid) — healthy: 12 V present and no TMC driver fault.
+- Green beacon — fault: 12 V missing or a TMC driver fault.
 
 ## EAF
 

@@ -37,13 +37,14 @@ Desktop app (Go) (Alpaca/UI) → USB CDC-ACM → Proto → Focuser → TMC2209/G
 
 ## Current state
 
-Implemented: `led` (onboard RGB status LED), `tmc` (TMC2209), `motors` (motion),
-`usb_cdc` (transport), `proto` (`proto=2` protocol, `device_id="eaf"`, with
+Implemented: `led` (onboard RGB status LED), `tmc` (TMC2209; a periodic UART probe
+doubles as the 12 V sense), `motors` (motion + power gating), `usb_cdc` (transport),
+`proto` (`proto=2` protocol, `device_id="eaf"`, with
 capabilities/state/action/config/control handlers) and `buttons` (local focuser
 enable/disable toggle).
 
-LED behaviour: the onboard RGB LED is green when healthy and green-beacons on a TMC
-driver fault.
+LED behaviour: the onboard RGB LED is green when healthy and green-beacons on a
+missing 12 V rail or a TMC driver fault.
 
 One physical button is wired (push-to-GND on GPIO 8): focuser enable/disable toggle.
 

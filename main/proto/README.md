@@ -65,7 +65,7 @@ instead of the session/data envelope.
 | Operation | Status |
 |---|---|
 | `capabilities` | Unified handshake header + focuser capabilities (real). |
-| `state / device` | `power_external_present` (always `true`), `health`, `focuser_busy`, `faults[]` (real). |
+| `state / device` | `power_external_present` (from the TMC probe), `health`, `focuser_busy`, `faults[]` (real). |
 | `state / focuser` | `counter_steps`, `enabled`, `is_moving`, `op_id`, counters, `driver.uart_ok` (real). |
 | `action / focuser / move` | `params.delta_steps` + `expected_counter` → `motors_move_by` (real). |
 | `action / focuser / stop` | `motors_stop` (real). |

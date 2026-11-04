@@ -63,10 +63,13 @@ esp_err_t motors_init(void) {
     }
 
     /* The TMC2209 must have been configured (tmc2209_hw_init) before this
-     * point; a missing driver is an unrecoverable hardware fault. */
+     * point. If it did not initialise, it may be unpowered (no 12 V) or
+     * faulty — treat it as a recoverable power fault: the periodic probe
+     * re-initialises it once it starts answering again. */
     if (!tmc2209_is_initialized()) {
-        ESP_LOGE(TAG, "TMC2209 not initialised — hardware fault");
-        motors_enter_hardware_fault();
+        ESP_LOGW(TAG, "TMC2209 not initialised — will re-init when it responds");
+        motors_enter_error_state();
+        motors_mark_power_fault();
     }
 
     return ESP_OK;
