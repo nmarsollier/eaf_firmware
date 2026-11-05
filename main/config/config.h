@@ -32,7 +32,7 @@
  * ========================================================================= */
 
 /* Focuser enable/disable toggle. */
-#define BUTTON_FOCUSER_ENABLE_GPIO  GPIO_NUM_8
+#define BUTTON_FOCUSER_ENABLE_GPIO  GPIO_NUM_4
 
 /* =========================================================================
  * Focuser motion profile (tunable).
