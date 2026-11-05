@@ -83,6 +83,9 @@ void led_set_state(LedState state) {
     case LED_STATE_NORMAL:
         led_set_color(LED_NORMAL_R, LED_NORMAL_G, LED_NORMAL_B);
         break;
+    case LED_STATE_MANUAL:
+        led_set_color(LED_MANUAL_R, LED_MANUAL_G, LED_MANUAL_B);
+        break;
     case LED_STATE_ERROR:
         led_beacon_start();
         break;

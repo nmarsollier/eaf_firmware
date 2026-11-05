@@ -6,7 +6,8 @@
 /*
  * Status LED — the onboard RGB indicator (WS2812 on GPIO 48).
  *
- * NORMAL — green (solid), the focuser is healthy.
+ * NORMAL — green (solid), the focuser is healthy and enabled.
+ * MANUAL — yellow (solid), the focuser is disabled so it can be turned by hand.
  * ERROR  — green beacon (blink-blink-pause), a fault: the TMC driver reports a
  *          hardware fault.
  *
@@ -16,6 +17,7 @@
  */
 typedef enum {
     LED_STATE_NORMAL,
+    LED_STATE_MANUAL,
     LED_STATE_ERROR
 } LedState;
 

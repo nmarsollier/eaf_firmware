@@ -19,11 +19,15 @@
 #define LED_WS2812_T1H      8         /* 0.8 µs high */
 #define LED_WS2812_T1L      4         /* 0.4 µs low  */
 
-/* ── Status colors (RGB) — always green ───────────────────── */
+/* ── Status colors (RGB) ──────────────────────────────────── */
 
 #define LED_NORMAL_R        0
 #define LED_NORMAL_G        64
 #define LED_NORMAL_B        0
+
+#define LED_MANUAL_R        64
+#define LED_MANUAL_G        64
+#define LED_MANUAL_B        0
 
 #define LED_ERROR_R         0
 #define LED_ERROR_G         64

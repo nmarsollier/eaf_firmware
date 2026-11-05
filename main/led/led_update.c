@@ -7,7 +7,8 @@
  * the correct LED state:
  *
  *   1. Motor error (power loss or driver fault) -> beacon (blink-blink-pause)
- *   2. Otherwise                                 -> green (normal)
+ *   2. Focuser disabled (manual focus)          -> yellow (solid)
+ *   3. Otherwise                                -> green (normal)
  *
  * No other module calls led_set_state() directly. This keeps all LED logic
  * cohesive in one place.
@@ -19,7 +20,11 @@
 void led_update(void) {
     MotorsState ms = motors_current_state();
 
-    bool fault = motors_status_is_error(ms.status);
-
-    led_set_state(fault ? LED_STATE_ERROR : LED_STATE_NORMAL);
+    if (motors_status_is_error(ms.status)) {
+        led_set_state(LED_STATE_ERROR);
+    } else if (!motors_is_enabled()) {
+        led_set_state(LED_STATE_MANUAL);
+    } else {
+        led_set_state(LED_STATE_NORMAL);
+    }
 }
