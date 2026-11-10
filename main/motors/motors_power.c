@@ -54,10 +54,12 @@ void motors_update_power(bool power_ok) {
     }
 
     if (tmc2209_reinit() == ESP_OK) {
-        ESP_LOGI(TAG, "external power restored — motors back to READY");
-        portENTER_CRITICAL(&motors_state_lock);
-        motors_state.status = MOTORS_STATUS_READY;
-        portEXIT_CRITICAL(&motors_state_lock);
+        ESP_LOGI(TAG, "external power restored");
+        /* The re-init unconditionally enables the driver, so restore the
+         * user's desired enable state, then recover to READY or DISABLED
+         * according to that intent. */
+        motors_enable_reapply();
+        motors_transition_recover(motors_is_enabled());
     } else {
         ESP_LOGE(TAG, "external power restored but TMC re-init failed — hardware fault");
         motors_enter_hardware_fault();

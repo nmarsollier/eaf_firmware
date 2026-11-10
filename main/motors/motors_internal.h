@@ -36,8 +36,10 @@ typedef struct {
 /* Queue handle — created by motors_queue_init(), shared across the module. */
 extern QueueHandle_t motion_cmd_queue;
 
-/* Binary semaphore — signaled by the motion task when a move settles (done or
- * aborted). motors_stop() waits on it so a stop returns with the final counter. */
+/* Binary semaphore used as an "idle token": taken by the motion task while a
+ * command is in flight, given back when it settles (done or aborted). Created
+ * available, so motors_stop() can take it — blocking until the task is idle —
+ * then give it back, returning with the final counter. */
 extern SemaphoreHandle_t motors_idle_sem;
 
 /* Stop epoch — incremented on every stop so queued commands can be
@@ -68,6 +70,9 @@ void motors_hw_set_direction(MotorDirection direction);
 
 /* Drive the TMC2209 EN pin — LOW = enabled, HIGH = disabled. */
 void motors_hw_set_enabled(bool enabled);
+
+/* Re-apply the desired enable state after a TMC re-init (power recovery). */
+void motors_enable_reapply(void);
 
 /* =========================================================================
  * RMT step pulse generation (motors_rmt.c).
@@ -103,6 +108,17 @@ esp_err_t motors_rmt_transmit(const rmt_symbol_word_t *symbols, uint32_t count);
  * ========================================================================= */
 
 extern MotorsState motors_state;
+
+/* Status transitions — the single owner of motors_state.status. Every command
+ * source (move, stop, enable/disable, power, error) routes its status change
+ * through these (motors_transition.c). */
+MotorResultCode motors_transition_reserve(void);
+void motors_transition_moving(void);
+void motors_transition_settle(void);
+void motors_transition_disable(void);
+void motors_transition_enable(void);
+void motors_transition_error(void);
+void motors_transition_recover(bool enabled);
 
 /* Hardware-fault latch — set by motors_init() failure paths. */
 void motors_enter_hardware_fault(void);

@@ -66,9 +66,10 @@ instead of the session/data envelope.
 |---|---|
 | `capabilities` | Unified handshake header + focuser capabilities (real). |
 | `state / device` | `power_external_present` (from the TMC probe), `health`, `focuser_busy`, `faults[]` (real). |
-| `state / focuser` | `counter_steps`, `enabled`, `is_moving`, `op_id`, counters, `driver.uart_ok` (real). |
+| `state / focuser` | `counter_steps`, `counter_valid`, `enabled`, `is_moving`, `op_id`, counters, `driver.uart_ok` (real). |
 | `action / focuser / move` | `params.delta_steps` + `expected_counter` → `motors_move_by` (real). |
 | `action / focuser / stop` | `motors_stop` (real). |
+| `action / focuser / set_position` | `params.counter_steps` → `motors_set_position`: sets the counter and marks it valid without moving. Rejects `BUSY` while moving, `DRIVER_FAULT` in ERROR. |
 | `action / device / restart` | Deferred reboot (real). |
 | `action / device / bootloader` | Reboot into ROM download mode (real, for button-less flashing). |
 | `state / buttons` | Focuser button press state (real, debounced). |

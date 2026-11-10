@@ -60,7 +60,7 @@ void proto_operation_poll(void) {
     }
     MotorsState ms = motors_current_state();
     s_op.executed_steps = ms.position - s_op.start_counter;
-    if (ms.status == MOTORS_STATUS_MOVING) {
+    if (motors_status_is_busy(ms.status)) {
         portEXIT_CRITICAL(&s_op_lock);
         return;
     }

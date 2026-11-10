@@ -14,9 +14,7 @@ void motors_enter_error_state(void) {
     motors_stop_generation++;
     motors_queue_clear();
 
-    portENTER_CRITICAL(&motors_state_lock);
-    motors_state.status = MOTORS_STATUS_ERROR;
-    portEXIT_CRITICAL(&motors_state_lock);
+    motors_transition_error();
 }
 
 void motors_enter_hardware_fault(void) {

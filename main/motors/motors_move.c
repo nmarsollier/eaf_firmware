@@ -1,42 +1,37 @@
 /* Motors - motors_move.c
  *
  * Purpose: enqueue move commands — absolute (move_to) and relative
- * (move_by). Both are serialized through the motion command queue.
+ * (move_by). Both are serialized through the motion command queue, and both
+ * atomically reserve the axis so a second move is rejected while one is
+ * queued, running, or disabled.
  */
 #include "motors_internal.h"
 
-MotorResultCode motors_move_to(int64_t position) {
-    if (motors_status_is_error(motors_state.status)) {
-        return MOTOR_ERR_HARDWARE_ERROR;
-    }
-    if (!motors_is_enabled()) {
-        return MOTOR_ERR_DISABLED;
+static MotorResultCode motors_move_enqueue(int64_t target_steps, bool relative) {
+    MotionCommand cmd = {
+        .target_steps = target_steps,
+        .relative = relative,
+    };
+
+    /* Reserve the axis atomically: only READY accepts a new command, so a
+     * second move is rejected while one is queued, running, or disabled. */
+    MotorResultCode result = motors_transition_reserve();
+    if (result != MOTOR_OK) {
+        return result;
     }
 
-    MotionCommand cmd = {
-        .target_steps = position,
-        .relative = false,
-    };
     if (!motors_queue_put(&cmd)) {
+        /* Enqueue failed — release the reservation. */
+        motors_transition_settle();
         return MOTOR_ERR_BUSY;
     }
     return MOTOR_OK;
 }
 
-MotorResultCode motors_move_by(int64_t steps) {
-    if (motors_status_is_error(motors_state.status)) {
-        return MOTOR_ERR_HARDWARE_ERROR;
-    }
-    if (!motors_is_enabled()) {
-        return MOTOR_ERR_DISABLED;
-    }
+MotorResultCode motors_move_to(int64_t position) {
+    return motors_move_enqueue(position, false);
+}
 
-    MotionCommand cmd = {
-        .target_steps = steps,
-        .relative = true,
-    };
-    if (!motors_queue_put(&cmd)) {
-        return MOTOR_ERR_BUSY;
-    }
-    return MOTOR_OK;
+MotorResultCode motors_move_by(int64_t steps) {
+    return motors_move_enqueue(steps, true);
 }

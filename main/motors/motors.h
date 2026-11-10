@@ -14,8 +14,12 @@
  */
 
 typedef enum {
+    /* The driver is disabled (EN released) — no motion until re-enabled. */
+    MOTORS_STATUS_DISABLED,
     /* Ready to accept a move command. */
     MOTORS_STATUS_READY,
+    /* A move command is reserved and waiting for the motion task. */
+    MOTORS_STATUS_QUEUED,
     /* Executing a move to a target position. */
     MOTORS_STATUS_MOVING,
     /* Unrecoverable hardware error (TMC init failed). Only reboot clears it. */
@@ -35,6 +39,7 @@ typedef enum {
  */
 typedef struct {
     int64_t position;      /* absolute STEP-pulse counter */
+    bool counter_valid;    /* false when the reference has been lost */
     MotorsStatus status;
 } MotorsState;
 
@@ -74,6 +79,13 @@ MotorResultCode motors_move_by(int64_t steps);
 MotorResultCode motors_stop(void);
 
 /*
+ * Set the absolute position counter and mark it valid. The motor must be
+ * stopped (not MOVING/QUEUED) and not in ERROR. It does not move the motor;
+ * it only declares what number represents the current physical position.
+ */
+MotorResultCode motors_set_position(int64_t position);
+
+/*
  * Enable/disable the focuser driver (TMC2209 EN pin). Disabling releases the
  * motor's holding torque so the focuser can be turned by hand, and rejects all
  * motion until re-enabled. Toggled by the local enable/disable button.
@@ -85,6 +97,9 @@ const char *motors_status_to_string(MotorsStatus status);
 
 /* True if `status` is the fatal error state (motor fault). */
 bool motors_status_is_error(MotorsStatus status);
+
+/* True while a move is pending or in progress (QUEUED or MOVING). */
+bool motors_status_is_busy(MotorsStatus status);
 
 /* True if a latched hardware fault occurred (e.g. TMC init failed). */
 bool motors_has_hardware_fault(void);

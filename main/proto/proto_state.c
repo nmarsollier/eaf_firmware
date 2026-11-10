@@ -45,7 +45,7 @@ static void state_device(char *out, size_t cap, uint32_t id, const char *session
         "\"focuser_busy\":%s,\"reset_reason\":\"%s\",\"faults\":[",
         power ? "true" : "false",
         fault ? "fault" : "ok",
-        ms.status == MOTORS_STATUS_MOVING ? "true" : "false",
+        motors_status_is_busy(ms.status) ? "true" : "false",
         reset_reason_str());
 
     if (fault) {
@@ -62,7 +62,7 @@ static void state_device(char *out, size_t cap, uint32_t id, const char *session
 static void state_focuser(char *out, size_t cap, uint32_t id, const char *session) {
     MotorsState ms = motors_current_state();
     ProtoOperation op = proto_operation_get();
-    bool moving = ms.status == MOTORS_STATUS_MOVING;
+    bool moving = motors_status_is_busy(ms.status);
     bool fault = motors_status_is_error(ms.status);
 
     size_t len = 0;
@@ -70,7 +70,7 @@ static void state_focuser(char *out, size_t cap, uint32_t id, const char *sessio
     proto_env_begin(out, cap, &len, "state", id, session, true);
     proto_buf_append(out, cap, &len,
         ",\"data\":{"
-        "\"counter_steps\":%lld,\"counter_valid\":true,\"is_moving\":%s,"
+        "\"counter_steps\":%lld,\"counter_valid\":%s,\"is_moving\":%s,"
         "\"source\":\"%s\",\"op_id\":\"%s\",\"op_status\":\"%s\","
         "\"start_counter\":%lld,\"target_counter\":%lld,\"executed_steps\":%lld,"
         "\"speed_steps_s\":0.0,\"enabled\":%s,\"enabled_command\":true,"
@@ -80,6 +80,7 @@ static void state_focuser(char *out, size_t cap, uint32_t id, const char *sessio
         "\"open_load_a\":false,\"open_load_b\":false},"
         "\"error\":%s,\"last_error\":null}}",
         (long long) ms.position,
+        ms.counter_valid ? "true" : "false",
         moving ? "true" : "false",
         moving ? "alpaca" : "none",
         op.op_id, op.status,
@@ -97,7 +98,7 @@ static void state_buttons(char *out, size_t cap, uint32_t id, const char *sessio
     const char *led = "ready";
     if (motors_status_is_error(ms.status)) {
         led = "error";
-    } else if (ms.status == MOTORS_STATUS_MOVING) {
+    } else if (motors_status_is_busy(ms.status)) {
         led = "moving";
     }
 

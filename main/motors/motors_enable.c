@@ -16,13 +16,23 @@ void motors_set_enabled(bool enabled) {
 
     if (enabled) {
         motors_hw_set_enabled(true);
+        motors_transition_enable();
     } else {
-        /* Settle any in-flight motion before releasing the driver. */
+        /* Settle any in-flight motion before releasing the driver, then
+         * transition to DISABLED (which also drops the position reference). */
         motors_stop();
         motors_hw_set_enabled(false);
+        motors_transition_disable();
     }
 }
 
 bool motors_is_enabled(void) {
     return s_enabled;
+}
+
+/* Re-apply the desired enable state to the EN pin. A TMC re-init (power
+ * recovery) unconditionally enables the driver, so a focuser the user had
+ * disabled must be driven back to disabled. */
+void motors_enable_reapply(void) {
+    motors_hw_set_enabled(s_enabled);
 }

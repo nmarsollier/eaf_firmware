@@ -4,9 +4,9 @@
  * and drives the focuser position via RMT step pulses with a trapezoidal
  * acceleration ramp (accelerate → cruise → decelerate).
  *
- * The motion task is the sole writer of motors_state.position.
- * Status is written cooperatively by the motion task, motors_stop() and
- * the error path, under motors_state_lock.
+ * The motion task is the sole writer of motors_state.position. It drives the
+ * QUEUED→MOVING and MOVING→READY status transitions through motors_transition.c
+ * (the single owner of status).
  */
 #include "motors_internal.h"
 
@@ -67,12 +67,6 @@ static void add_position(int64_t delta) {
     portEXIT_CRITICAL(&motors_state_lock);
 }
 
-static void set_status(MotorsStatus status) {
-    portENTER_CRITICAL(&motors_state_lock);
-    motors_state.status = status;
-    portEXIT_CRITICAL(&motors_state_lock);
-}
-
 /* ── Step emission ─────────────────────────────────────────── */
 
 /*
@@ -127,7 +121,7 @@ static void run_move(int64_t target, uint32_t generation)
     uint32_t steps = (uint32_t)(distance > 0 ? distance : -distance);
 
     motors_hw_set_direction(dir);
-    set_status(MOTORS_STATUS_MOVING);
+    motors_transition_moving();
 
     uint32_t n_accel = accel_step_count();
     if (steps < 2 * n_accel) {
@@ -157,8 +151,6 @@ static void run_move(int64_t target, uint32_t generation)
             return;
         }
     }
-
-    set_status(MOTORS_STATUS_READY);
 }
 
 /* ── Task loop ─────────────────────────────────────────────── */
@@ -172,20 +164,26 @@ static void motion_task(void *arg) {
             continue;
         }
 
-        /* Discard a command invalidated by a STOP that landed after enqueue. */
-        if (cmd.generation != motors_stop_generation) {
-            continue;
+        /* Hold the idle token while a command is in flight, so a concurrent
+         * motors_stop() blocks until this task settles and returns to READY. */
+        xSemaphoreTake(motors_idle_sem, portMAX_DELAY);
+
+        /* A command invalidated by a STOP that landed after enqueue is skipped
+         * without running; both paths settle to READY below. */
+        if (cmd.generation == motors_stop_generation) {
+            int64_t target = cmd.target_steps;
+            if (cmd.relative) {
+                target = read_position() + cmd.target_steps;
+            }
+            run_move(target, cmd.generation);
         }
 
-        int64_t target = cmd.target_steps;
-        if (cmd.relative) {
-            target = read_position() + cmd.target_steps;
-        }
+        /* Writer of the READY transition: a move that completed, was aborted,
+         * discarded, or was a no-op all settle here as READY (a discarded
+         * command otherwise leaves QUEUED behind). A hardware fault (ERROR) is
+         * left untouched. */
+        motors_transition_settle();
 
-        /* Clear any stale idle signal, run the move, then signal that it
-         * settled (completed or aborted). motors_stop() waits on this. */
-        xSemaphoreTake(motors_idle_sem, 0);
-        run_move(target, cmd.generation);
         xSemaphoreGive(motors_idle_sem);
     }
 }

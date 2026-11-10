@@ -20,8 +20,12 @@ MotorsState motors_current_state(void) {
 
 const char *motors_status_to_string(MotorsStatus status) {
     switch (status) {
+        case MOTORS_STATUS_DISABLED:
+            return "disabled";
         case MOTORS_STATUS_READY:
             return "ready";
+        case MOTORS_STATUS_QUEUED:
+            return "queued";
         case MOTORS_STATUS_MOVING:
             return "moving";
         case MOTORS_STATUS_ERROR:
@@ -33,4 +37,8 @@ const char *motors_status_to_string(MotorsStatus status) {
 
 bool motors_status_is_error(MotorsStatus status) {
     return status == MOTORS_STATUS_ERROR;
+}
+
+bool motors_status_is_busy(MotorsStatus status) {
+    return status == MOTORS_STATUS_QUEUED || status == MOTORS_STATUS_MOVING;
 }

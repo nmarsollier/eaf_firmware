@@ -28,10 +28,14 @@ static const char *motor_error_code(void) {
 }
 
 /* Error code for a rejected move: a disabled focuser is distinct from a
- * hardware fault. */
+ * hardware fault, and a busy axis is rejected before it reaches the motors
+ * module. */
 static const char *move_error_code(MotorResultCode r) {
     if (r == MOTOR_ERR_DISABLED) {
         return "DISABLED";
+    }
+    if (r == MOTOR_ERR_BUSY) {
+        return "BUSY";
     }
     return motor_error_code();
 }
@@ -114,9 +118,9 @@ static void handle_move(const char *req, uint32_t id, const char *session,
                  "focuser in error state");
         return;
     }
-    if (ms.status == MOTORS_STATUS_MOVING) {
+    if (motors_status_is_busy(ms.status)) {
         emit_err(out, cap, "action", id, session, "BUSY",
-                 "focuser already moving");
+                 "focuser busy");
         return;
     }
     if (has_expected && expected != ms.position) {
@@ -169,6 +173,42 @@ static void handle_stop(uint32_t id, const char *session, char *out, size_t cap)
             "\"is_moving\":false,\"counter_steps\":%lld,\"cancelled_op_id\":\"%s\"",
             (long long) ms.position, op.op_id);
     return;
+}
+
+/* ── focuser set_position ──────────────────────────────────── */
+
+static void handle_set_position(const char *req, uint32_t id, const char *session,
+                                char *out, size_t cap) {
+    char params[256];
+    int64_t position = 0;
+    bool has_position = false;
+
+    if (proto_json_get_object(req, "params", params, sizeof(params))) {
+        has_position = proto_json_get_int64(params, "counter_steps", &position);
+    }
+
+    if (!has_position) {
+        emit_err(out, cap, "action", id, session, "INVALID_ARGUMENT",
+                 "set_position requires params.counter_steps");
+        return;
+    }
+
+    MotorResultCode r = motors_set_position(position);
+    if (r == MOTOR_ERR_HARDWARE_ERROR) {
+        emit_err(out, cap, "action", id, session, motor_error_code(),
+                 "focuser in error state");
+        return;
+    }
+    if (r == MOTOR_ERR_BUSY) {
+        emit_err(out, cap, "action", id, session, "BUSY",
+                 "focuser busy");
+        return;
+    }
+
+    MotorsState ms = motors_current_state();
+    emit_ok(out, cap, "action", id, session,
+            "\"counter_steps\":%lld,\"counter_valid\":%s",
+            (long long) ms.position, ms.counter_valid ? "true" : "false");
 }
 
 /* ── device restart ────────────────────────────────────────── */
@@ -236,6 +276,8 @@ void proto_handle_action(const char *req, uint32_t id, char *out, size_t cap) {
         handle_move(req, id, session, out, cap);
     } else if (strcmp(target, "focuser") == 0 && strcmp(action, "stop") == 0) {
         handle_stop(id, session, out, cap);
+    } else if (strcmp(target, "focuser") == 0 && strcmp(action, "set_position") == 0) {
+        handle_set_position(req, id, session, out, cap);
     } else if (strcmp(target, "device") == 0 && strcmp(action, "restart") == 0) {
         handle_restart(id, session, out, cap);
     } else if (strcmp(target, "device") == 0 && strcmp(action, "bootloader") == 0) {

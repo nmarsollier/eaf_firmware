@@ -13,10 +13,12 @@
 static const char *TAG = "MOTORS_INIT";
 
 /*
- * Default motors state — position zero (home), ready.
+ * Default motors state — position zero, ready, no reference yet. After a
+ * reboot the physical position is unknown until a set_position establishes it.
  */
 MotorsState motors_state = {
     .position = 0,
+    .counter_valid = false,
     .status = MOTORS_STATUS_READY,
 };
 
@@ -54,6 +56,10 @@ esp_err_t motors_init(void) {
         motors_enter_hardware_fault();
         return ESP_ERR_NO_MEM;
     }
+
+    /* The idle token starts available: the motion task is idle until its first
+     * command. motors_stop() takes it (blocking) to wait for a settle. */
+    xSemaphoreGive(motors_idle_sem);
 
     err = motors_motion_task_init();
     if (err != ESP_OK) {
