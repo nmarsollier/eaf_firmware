@@ -20,6 +20,18 @@ static MotorResultCode motors_move_enqueue(int64_t target_steps, bool relative) 
         return result;
     }
 
+    /* The axis is reserved (QUEUED) and the position is stable until we commit
+     * — validate the destination against the soft limits, then revert on an
+     * out-of-range request. */
+    int64_t target = target_steps;
+    if (relative) {
+        target = motors_current_state().position + target_steps;
+    }
+    if (target < motors_min_position() || target > motors_max_position()) {
+        motors_transition_settle();  /* release the reservation */
+        return MOTOR_ERR_LIMIT;
+    }
+
     if (!motors_queue_put(&cmd)) {
         /* Enqueue failed — release the reservation. */
         motors_transition_settle();
@@ -34,4 +46,12 @@ MotorResultCode motors_move_to(int64_t position) {
 
 MotorResultCode motors_move_by(int64_t steps) {
     return motors_move_enqueue(steps, true);
+}
+
+int64_t motors_min_position(void) {
+    return (int64_t) MOTORS_REFERENCE_POSITION - (int64_t) MOTORS_MAX_TRAVEL_STEPS;
+}
+
+int64_t motors_max_position(void) {
+    return (int64_t) MOTORS_REFERENCE_POSITION + (int64_t) MOTORS_MAX_TRAVEL_STEPS;
 }

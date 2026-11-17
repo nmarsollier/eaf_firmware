@@ -47,3 +47,15 @@
 
 /* Acceleration (steps/s²). Ramp length = (max² − start²) / (2·accel). */
 #define MOTORS_ACCEL_HZ         2000
+
+/* =========================================================================
+ * Focuser soft limits
+ * ========================================================================= */
+
+/* The position reference is declared at boot and re-declared on every
+ * disable→enable; from it the axis can travel MOTORS_MAX_TRAVEL_STEPS in
+ * either direction. It sits at 100000 so the resulting range is 0..200000 —
+ * non-negative, matching the absolute Alpaca position the gateway exposes
+ * (which cannot go below 0). */
+#define MOTORS_REFERENCE_POSITION 100000
+#define MOTORS_MAX_TRAVEL_STEPS   100000

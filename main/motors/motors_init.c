@@ -13,12 +13,13 @@
 static const char *TAG = "MOTORS_INIT";
 
 /*
- * Default motors state — position zero, ready, no reference yet. After a
- * reboot the physical position is unknown until a set_position establishes it.
+ * Default motors state — the position reference is established at boot (the
+ * axis starts at MOTORS_REFERENCE_POSITION, holding position because the
+ * driver is enabled by default). It is re-declared on every disable→enable.
  */
 MotorsState motors_state = {
-    .position = 0,
-    .counter_valid = false,
+    .position = MOTORS_REFERENCE_POSITION,
+    .counter_valid = true,
     .status = MOTORS_STATUS_READY,
 };
 

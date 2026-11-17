@@ -23,7 +23,6 @@ set(main_srcs
         "motors/motors_move.c"
         "motors/motors_stop.c"
         "motors/motors_enable.c"
-        "motors/motors_set_position.c"
 
         "buttons/buttons.c"
 

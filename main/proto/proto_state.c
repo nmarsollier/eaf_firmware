@@ -74,7 +74,7 @@ static void state_focuser(char *out, size_t cap, uint32_t id, const char *sessio
         "\"source\":\"%s\",\"op_id\":\"%s\",\"op_status\":\"%s\","
         "\"start_counter\":%lld,\"target_counter\":%lld,\"executed_steps\":%lld,"
         "\"speed_steps_s\":0.0,\"enabled\":%s,\"enabled_command\":true,"
-        "\"guard\":{\"enabled\":false,\"min_counter\":0,\"max_counter\":0},"
+        "\"guard\":{\"enabled\":true,\"min_counter\":%lld,\"max_counter\":%lld},"
         "\"driver\":{\"uart_ok\":%s,\"last_read_ms\":0,\"overtemp_warning\":false,"
         "\"overtemp_shutdown\":false,\"short_a\":false,\"short_b\":false,"
         "\"open_load_a\":false,\"open_load_b\":false},"
@@ -87,6 +87,7 @@ static void state_focuser(char *out, size_t cap, uint32_t id, const char *sessio
         (long long) op.start_counter, (long long) op.target_counter,
         (long long) op.executed_steps,
         motors_is_enabled() ? "true" : "false",
+        (long long) motors_min_position(), (long long) motors_max_position(),
         tmc2209_is_initialized() ? "true" : "false",
         fault ? "\"DRIVER_FAULT\"" : "null");
 }

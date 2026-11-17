@@ -37,6 +37,9 @@ static const char *move_error_code(MotorResultCode r) {
     if (r == MOTOR_ERR_BUSY) {
         return "BUSY";
     }
+    if (r == MOTOR_ERR_LIMIT) {
+        return "LIMIT";
+    }
     return motor_error_code();
 }
 
@@ -175,42 +178,6 @@ static void handle_stop(uint32_t id, const char *session, char *out, size_t cap)
     return;
 }
 
-/* ── focuser set_position ──────────────────────────────────── */
-
-static void handle_set_position(const char *req, uint32_t id, const char *session,
-                                char *out, size_t cap) {
-    char params[256];
-    int64_t position = 0;
-    bool has_position = false;
-
-    if (proto_json_get_object(req, "params", params, sizeof(params))) {
-        has_position = proto_json_get_int64(params, "counter_steps", &position);
-    }
-
-    if (!has_position) {
-        emit_err(out, cap, "action", id, session, "INVALID_ARGUMENT",
-                 "set_position requires params.counter_steps");
-        return;
-    }
-
-    MotorResultCode r = motors_set_position(position);
-    if (r == MOTOR_ERR_HARDWARE_ERROR) {
-        emit_err(out, cap, "action", id, session, motor_error_code(),
-                 "focuser in error state");
-        return;
-    }
-    if (r == MOTOR_ERR_BUSY) {
-        emit_err(out, cap, "action", id, session, "BUSY",
-                 "focuser busy");
-        return;
-    }
-
-    MotorsState ms = motors_current_state();
-    emit_ok(out, cap, "action", id, session,
-            "\"counter_steps\":%lld,\"counter_valid\":%s",
-            (long long) ms.position, ms.counter_valid ? "true" : "false");
-}
-
 /* ── device restart ────────────────────────────────────────── */
 
 static void handle_restart(uint32_t id, const char *session, char *out, size_t cap) {
@@ -276,8 +243,6 @@ void proto_handle_action(const char *req, uint32_t id, char *out, size_t cap) {
         handle_move(req, id, session, out, cap);
     } else if (strcmp(target, "focuser") == 0 && strcmp(action, "stop") == 0) {
         handle_stop(id, session, out, cap);
-    } else if (strcmp(target, "focuser") == 0 && strcmp(action, "set_position") == 0) {
-        handle_set_position(req, id, session, out, cap);
     } else if (strcmp(target, "device") == 0 && strcmp(action, "restart") == 0) {
         handle_restart(id, session, out, cap);
     } else if (strcmp(target, "device") == 0 && strcmp(action, "bootloader") == 0) {

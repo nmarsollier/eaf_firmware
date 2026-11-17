@@ -9,8 +9,9 @@
  * Focuser motor subsystem — the single stepper axis driven by the TMC2209.
  *
  * Position is an int64_t absolute STEP-pulse counter (8 per full step,
- * TMC MRES=8). The exact steps-per-mm mapping is unknown and calibrated
- * later; the module only reasons in steps.
+ * TMC MRES=8). It is always relative to a reference that is re-declared on
+ * boot and on every disable→enable (MOTORS_REFERENCE_POSITION), and bounded by
+ * soft limits MOTORS_MAX_TRAVEL_STEPS on either side of that reference.
  */
 
 typedef enum {
@@ -30,7 +31,8 @@ typedef enum {
     MOTOR_OK = 0,
     MOTOR_ERR_HARDWARE_ERROR,
     MOTOR_ERR_BUSY,
-    MOTOR_ERR_DISABLED
+    MOTOR_ERR_DISABLED,
+    MOTOR_ERR_LIMIT
 } MotorResultCode;
 
 /*
@@ -69,26 +71,27 @@ bool motors_has_power(void);
 /* Return a snapshot copy of the current MotorsState. */
 MotorsState motors_current_state(void);
 
-/* Move to an absolute position. Returns MOTOR_ERR_HARDWARE_ERROR in ERROR. */
+/* Move to an absolute position. Returns MOTOR_ERR_LIMIT if `position` is
+ * outside the soft limits, MOTOR_ERR_HARDWARE_ERROR in ERROR. */
 MotorResultCode motors_move_to(int64_t position);
 
-/* Move by a relative number of steps. Returns MOTOR_ERR_HARDWARE_ERROR in ERROR. */
+/* Move by a relative number of steps. Returns MOTOR_ERR_LIMIT if the resulting
+ * position would be outside the soft limits. */
 MotorResultCode motors_move_by(int64_t steps);
 
 /* Stop the current motion and return to READY. */
 MotorResultCode motors_stop(void);
 
-/*
- * Set the absolute position counter and mark it valid. The motor must be
- * stopped (not MOVING/QUEUED) and not in ERROR. It does not move the motor;
- * it only declares what number represents the current physical position.
- */
-MotorResultCode motors_set_position(int64_t position);
+/* Soft-limit bounds: the positions the axis may not move past. */
+int64_t motors_min_position(void);
+int64_t motors_max_position(void);
 
 /*
  * Enable/disable the focuser driver (TMC2209 EN pin). Disabling releases the
  * motor's holding torque so the focuser can be turned by hand, and rejects all
- * motion until re-enabled. Toggled by the local enable/disable button.
+ * motion until re-enabled. Re-enabling re-declares the position reference, so
+ * the counter restarts at MOTORS_REFERENCE_POSITION. Toggled by the local
+ * enable/disable button.
  */
 void motors_set_enabled(bool enabled);
 bool motors_is_enabled(void);

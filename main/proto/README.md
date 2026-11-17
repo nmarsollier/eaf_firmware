@@ -66,10 +66,9 @@ instead of the session/data envelope.
 |---|---|
 | `capabilities` | Unified handshake header + focuser capabilities (real). |
 | `state / device` | `power_external_present` (from the TMC probe), `health`, `focuser_busy`, `faults[]` (real). |
-| `state / focuser` | `counter_steps`, `counter_valid`, `enabled`, `is_moving`, `op_id`, counters, `driver.uart_ok` (real). |
-| `action / focuser / move` | `params.delta_steps` + `expected_counter` → `motors_move_by` (real). |
+| `state / focuser` | `counter_steps`, `counter_valid`, `enabled`, `is_moving`, `op_id`, counters, `guard` (soft-limit bounds), `driver.uart_ok` (real). |
+| `action / focuser / move` | `params.delta_steps` + `expected_counter` → `motors_move_by`; rejected with `LIMIT` outside the soft limits (real). |
 | `action / focuser / stop` | `motors_stop` (real). |
-| `action / focuser / set_position` | `params.counter_steps` → `motors_set_position`: sets the counter and marks it valid without moving. Rejects `BUSY` while moving, `DRIVER_FAULT` in ERROR. |
 | `action / device / restart` | Deferred reboot (real). |
 | `action / device / bootloader` | Reboot into ROM download mode (real, for button-less flashing). |
 | `state / buttons` | Focuser button press state (real, debounced). |
@@ -81,7 +80,7 @@ instead of the session/data envelope.
 ## Error codes (strings)
 
 `INVALID_ARGUMENT`, `BUSY`, `COUNTER_CHANGED`, `DRIVER_FAULT`,
-`DISABLED`, `INTERNAL`, `NOT_SUPPORTED`.
+`DISABLED`, `LIMIT`, `INTERNAL`, `NOT_SUPPORTED`.
 
 ## State error model
 
@@ -93,6 +92,16 @@ reports the subsystem's own condition:
 
 A `state` request **always answers**: a driver fault is returned as an error state,
 never as a hang or a fabricated reading.
+
+## Position reference and soft limits
+
+The position counter is absolute and non-negative: it is declared at boot and
+re-declared on every disable→enable (`control/focuser/enabled` with `value:true`,
+or the local button) at `MOTORS_REFERENCE_POSITION` (100000). From there the axis
+may move `MOTORS_MAX_TRAVEL_STEPS` (100000) in either direction, giving a valid
+range of `0..200000`; a `move` whose destination falls outside those bounds is
+rejected with `LIMIT`. The bounds are reported in `state/focuser` as
+`guard.min_counter` / `guard.max_counter`.
 
 ## Pending (out of this iteration)
 

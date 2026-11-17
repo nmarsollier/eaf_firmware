@@ -55,6 +55,10 @@ void motors_transition_enable(void) {
     portENTER_CRITICAL(&motors_state_lock);
     if (motors_state.status == MOTORS_STATUS_DISABLED) {
         motors_state.status = MOTORS_STATUS_READY;
+        /* The position reference is re-declared on every disable→enable:
+         * whatever the user left focused is now the reference point again. */
+        motors_state.position = MOTORS_REFERENCE_POSITION;
+        motors_state.counter_valid = true;
     }
     portEXIT_CRITICAL(&motors_state_lock);
 }
@@ -72,6 +76,12 @@ void motors_transition_recover(bool enabled) {
     portENTER_CRITICAL(&motors_state_lock);
     if (motors_state.status == MOTORS_STATUS_ERROR) {
         motors_state.status = enabled ? MOTORS_STATUS_READY : MOTORS_STATUS_DISABLED;
+        if (enabled) {
+            /* The driver was unpowered, so the reference was lost — re-declare
+             * it on recovery, exactly as on enable. */
+            motors_state.position = MOTORS_REFERENCE_POSITION;
+            motors_state.counter_valid = true;
+        }
     }
     portEXIT_CRITICAL(&motors_state_lock);
 }
